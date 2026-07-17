@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -12,16 +13,15 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Collections;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
-    private final CustomUserDetailsService customUserDetailsService;
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, CustomUserDetailsService customUserDetailsService) {
+    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
         this.jwtTokenProvider = jwtTokenProvider;
-        this.customUserDetailsService = customUserDetailsService;
     }
 
     @Override
@@ -41,9 +41,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = this.customUserDetailsService.loadUserByUsername(username);
+            // Verify JWT signature and expiration statelessly without database lookup
+            if (jwtTokenProvider.validateTokenSignatureAndExpiry(jwt)) {
+                String role = jwtTokenProvider.extractRole(jwt);
+                
+                // Construct stateless UserDetails directly from verified JWT claims
+                UserDetails userDetails = new org.springframework.security.core.userdetails.User(
+                        username,
+                        "",
+                        Collections.singletonList(new SimpleGrantedAuthority(role))
+                );
 
-            if (jwtTokenProvider.validateToken(jwt, userDetails)) {
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails, null, userDetails.getAuthorities());
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

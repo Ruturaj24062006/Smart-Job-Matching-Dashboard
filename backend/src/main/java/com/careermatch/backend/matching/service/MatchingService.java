@@ -39,30 +39,42 @@ public class MatchingService {
         List<Match> matches = new ArrayList<>();
 
         for (Job job : topJobs) {
-            // 2. Calculate composite scores
-            double score = scoringService.calculateCompositeScore(student, job);
-            boolean eligible = score >= 40.0; // threshold for eligibility
-
-            // 3. Save or update match
-            Optional<Match> existingOpt = matchRepository.findByStudentIdAndJobId(studentId, job.getId());
-            Match match;
-            if (existingOpt.isPresent()) {
-                match = existingOpt.get();
-                match.setCompositeScore(score);
-                match.setEligibilityStatus(eligible);
-            } else {
-                match = Match.builder()
-                        .student(student)
-                        .job(job)
-                        .compositeScore(score)
-                        .eligibilityStatus(eligible)
-                        .build();
-            }
-            matches.add(matchRepository.save(match));
+            matches.add(generateMatchForStudentAndJob(student, job));
         }
 
         log.info("Successfully updated {} matches for student {}", matches.size(), studentId);
         return matches;
+    }
+
+    @Transactional
+    public Match generateMatchesForStudentAndJob(UUID studentId, Job job) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + studentId));
+        return generateMatchForStudentAndJob(student, job);
+    }
+
+    @Transactional
+    public Match generateMatchForStudentAndJob(Student student, Job job) {
+        // Calculate composite scores
+        double score = scoringService.calculateCompositeScore(student, job);
+        boolean eligible = score >= 40.0; // threshold for eligibility
+
+        // Save or update match
+        Optional<Match> existingOpt = matchRepository.findByStudentIdAndJobId(student.getId(), job.getId());
+        Match match;
+        if (existingOpt.isPresent()) {
+            match = existingOpt.get();
+            match.setCompositeScore(score);
+            match.setEligibilityStatus(eligible);
+        } else {
+            match = Match.builder()
+                    .student(student)
+                    .job(job)
+                    .compositeScore(score)
+                    .eligibilityStatus(eligible)
+                    .build();
+        }
+        return matchRepository.save(match);
     }
 
     @Transactional
@@ -76,14 +88,7 @@ public class MatchingService {
         }
 
         log.info("Enriching Match: {} with AI insights...", matchId);
-        String resumeText = match.getStudent().getUser().getEmail(); // fallback if resume parsed text is empty
-        Optional<com.careermatch.backend.resume.entity.Resume> resumeOpt = match.getStudent().getSkills().isEmpty() 
-                ? Optional.empty()
-                : Optional.ofNullable(match.getStudent().getUser().getEmail() != null ? null : null); // Mock checks
         
-        // Actually find the current resume
-        // We can inject ResumeRepository or find it from Student
-        // To avoid circular dependency, we retrieve the parsed text from student's bio + skills + projects etc.
         StringBuilder profileSummary = new StringBuilder();
         profileSummary.append("Skills: ");
         match.getStudent().getSkills().forEach(s -> profileSummary.append(s.getName()).append(", "));

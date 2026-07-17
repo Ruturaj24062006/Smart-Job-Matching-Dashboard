@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -17,6 +19,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = {"user", "skills", "projects", "experience", "education", "certifications"})
 public class Student {
 
     @Id
@@ -25,7 +28,6 @@ public class Student {
     @OneToOne(fetch = FetchType.LAZY)
     @MapsId
     @JoinColumn(name = "id")
-    @ToString.Exclude
     private User user;
 
     @Column(name = "first_name")
@@ -57,22 +59,27 @@ public class Student {
     private String languages;
 
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Fetch(FetchMode.SUBSELECT)
     @Builder.Default
     private List<StudentSkill> skills = new ArrayList<>();
 
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Fetch(FetchMode.SUBSELECT)
     @Builder.Default
     private List<StudentProject> projects = new ArrayList<>();
 
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Fetch(FetchMode.SUBSELECT)
     @Builder.Default
     private List<StudentExperience> experience = new ArrayList<>();
 
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Fetch(FetchMode.SUBSELECT)
     @Builder.Default
     private List<StudentEducation> education = new ArrayList<>();
 
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Fetch(FetchMode.SUBSELECT)
     @Builder.Default
     private List<StudentCertification> certifications = new ArrayList<>();
 

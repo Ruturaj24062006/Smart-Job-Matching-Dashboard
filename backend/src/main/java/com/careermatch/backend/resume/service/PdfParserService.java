@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
@@ -26,7 +27,6 @@ public class PdfParserService {
             String text = runPythonParser(tempFile.toAbsolutePath().toString());
             if (text != null && !text.isBlank()) {
                 log.info("PyMuPDF PDF extraction succeeded.");
-                // Delete temp file after successful extraction
                 Files.deleteIfExists(tempFile);
                 return text;
             }
@@ -52,7 +52,15 @@ public class PdfParserService {
             }
         }
 
-        int exitCode = process.waitFor();
+        // Apply a 30-second execution timeout to prevent worker thread starvation
+        boolean finished = process.waitFor(30, TimeUnit.SECONDS);
+        if (!finished) {
+            process.destroyForcibly();
+            log.error("PyMuPDF Python parsing process timed out after 30 seconds for file: {}", absolutePath);
+            throw new RuntimeException("Python PDF parser script timed out after 30 seconds");
+        }
+
+        int exitCode = process.exitValue();
         if (exitCode != 0) {
             StringBuilder error = new StringBuilder();
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {

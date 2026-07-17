@@ -21,7 +21,8 @@ public class ResumeTaskListener {
         try {
             resumeService.processResume(event.getResumeId());
         } catch (Exception e) {
-            log.error("Failed to process resume event asynchronously: {}", e.getMessage());
+            log.error("Failed to process resume event asynchronously: {}", e.getMessage(), e);
+            throw e; // Re-throw to trigger RabbitMQ retry policy and route to DLQ
         }
     }
 }

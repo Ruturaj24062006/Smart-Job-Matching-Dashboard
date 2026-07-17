@@ -48,6 +48,37 @@ public class JwtTokenProvider {
         return extractClaim(token, Claims::getExpiration);
     }
 
+    public String extractRole(String token) {
+        Claims claims = extractAllClaims(token);
+        // 1. Check custom claim "role"
+        String role = claims.get("role", String.class);
+        if (role != null) {
+            if (!role.startsWith("ROLE_")) {
+                role = "ROLE_" + role.toUpperCase();
+            }
+            return role;
+        }
+        // 2. Check user_metadata map
+        Map<?, ?> metadata = claims.get("user_metadata", Map.class);
+        if (metadata != null && metadata.get("role") != null) {
+            String metaRole = metadata.get("role").toString();
+            if (!metaRole.startsWith("ROLE_")) {
+                metaRole = "ROLE_" + metaRole.toUpperCase();
+            }
+            return metaRole;
+        }
+        // Default fallback to STUDENT role
+        return "ROLE_STUDENT";
+    }
+
+    public boolean validateTokenSignatureAndExpiry(String token) {
+        try {
+            return !isTokenExpired(token);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
