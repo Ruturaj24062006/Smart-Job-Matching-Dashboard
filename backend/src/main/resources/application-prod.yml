@@ -4,7 +4,7 @@ spring:
   # Supabase session-mode pooler is limited to 15 connections max
   # Using transaction-mode pooler (port 6543) for better connection efficiency
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:6543}/${DB_NAME:postgres}?prepareThreshold=0&sslmode=require
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:6543}/${DB_NAME:postgres}?prepareThreshold=0&sslmode=require&sslrootcert=system
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:password}
     hikari:
@@ -16,7 +16,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
     show-sql: false
     properties:
       hibernate:
