@@ -1,0 +1,85 @@
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="brand-logo"><a href="/">NEXUS</a></div>
+      <h2 class="auth-title">Create Account</h2>
+      <p class="auth-subtitle">Join NEXUS to align your career or candidate search.</p>
+    </div>
+
+    <!-- Success & Error Banners -->
+    <div *ngIf="successMessage()" class="alert alert-success">
+      {{ successMessage() }}
+    </div>
+    <div *ngIf="errorMessage()" class="alert alert-error">
+      {{ errorMessage() }}
+    </div>
+
+    <!-- Role Selection Tabs -->
+    <div class="role-tabs">
+      <button type="button" class="role-tab" [class.active]="selectedRole() === 'ROLE_STUDENT'" (click)="selectRole('ROLE_STUDENT')">
+        Student
+      </button>
+      <button type="button" class="role-tab" [class.active]="selectedRole() === 'ROLE_RECRUITER'" (click)="selectRole('ROLE_RECRUITER')">
+        Recruiter
+      </button>
+    </div>
+
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="auth-form">
+      <!-- Dynamic Student Fields -->
+      <div *ngIf="selectedRole() === 'ROLE_STUDENT'" class="form-row-grid">
+        <div class="form-group" [ngClass]="{'has-error': registerForm.get('firstName')?.touched && registerForm.get('firstName')?.invalid}">
+          <label for="firstName" class="form-label">First Name</label>
+          <input type="text" id="firstName" formControlName="firstName" placeholder="John" class="form-input" autocomplete="given-name">
+          <span *ngIf="registerForm.get('firstName')?.touched && registerForm.get('firstName')?.errors?.['required']" class="error-msg">Required</span>
+        </div>
+
+        <div class="form-group" [ngClass]="{'has-error': registerForm.get('lastName')?.touched && registerForm.get('lastName')?.invalid}">
+          <label for="lastName" class="form-label">Last Name</label>
+          <input type="text" id="lastName" formControlName="lastName" placeholder="Doe" class="form-input" autocomplete="family-name">
+          <span *ngIf="registerForm.get('lastName')?.touched && registerForm.get('lastName')?.errors?.['required']" class="error-msg">Required</span>
+        </div>
+      </div>
+
+      <!-- Dynamic Recruiter Fields -->
+      <div *ngIf="selectedRole() === 'ROLE_RECRUITER'" class="form-row-grid">
+        <div class="form-group" [ngClass]="{'has-error': registerForm.get('companyName')?.touched && registerForm.get('companyName')?.invalid}">
+          <label for="companyName" class="form-label">Company Name</label>
+          <input type="text" id="companyName" formControlName="companyName" placeholder="Acme Inc" class="form-input" autocomplete="organization">
+          <span *ngIf="registerForm.get('companyName')?.touched && registerForm.get('companyName')?.errors?.['required']" class="error-msg">Required</span>
+        </div>
+
+        <div class="form-group" [ngClass]="{'has-error': registerForm.get('jobTitle')?.touched && registerForm.get('jobTitle')?.invalid}">
+          <label for="jobTitle" class="form-label">Job Title</label>
+          <input type="text" id="jobTitle" formControlName="jobTitle" placeholder="Technical Recruiter" class="form-input" autocomplete="honorific-prefix">
+          <span *ngIf="registerForm.get('jobTitle')?.touched && registerForm.get('jobTitle')?.errors?.['required']" class="error-msg">Required</span>
+        </div>
+      </div>
+
+      <!-- Common Fields: Email -->
+      <div class="form-group" [ngClass]="{'has-error': registerForm.get('email')?.touched && registerForm.get('email')?.invalid}">
+        <label for="email" class="form-label">Email Address</label>
+        <input type="email" id="email" formControlName="email" placeholder="you@example.com" class="form-input" autocomplete="email">
+        <span *ngIf="registerForm.get('email')?.touched && registerForm.get('email')?.errors?.['required']" class="error-msg">Email is required</span>
+        <span *ngIf="registerForm.get('email')?.touched && registerForm.get('email')?.errors?.['email']" class="error-msg">Please enter a valid email</span>
+      </div>
+
+      <!-- Common Fields: Password -->
+      <div class="form-group" [ngClass]="{'has-error': registerForm.get('password')?.touched && registerForm.get('password')?.invalid}">
+        <label for="password" class="form-label">Password</label>
+        <input type="password" id="password" formControlName="password" placeholder="Min. 6 characters" class="form-input" autocomplete="new-password">
+        <span *ngIf="registerForm.get('password')?.touched && registerForm.get('password')?.errors?.['required']" class="error-msg">Password is required</span>
+        <span *ngIf="registerForm.get('password')?.touched && registerForm.get('password')?.errors?.['minlength']" class="error-msg">Must be at least 6 characters</span>
+      </div>
+
+      <!-- Register Button -->
+      <button type="submit" [disabled]="registerForm.invalid || isLoading()" class="btn btn-primary btn-block">
+        <span *ngIf="!isLoading()">Register</span>
+        <span *ngIf="isLoading()" class="spinner-inline"></span>
+      </button>
+    </form>
+
+    <div class="auth-footer">
+      Already have an account? <a routerLink="/login" class="auth-link">Log in</a>
+    </div>
+  </div>
+</div>

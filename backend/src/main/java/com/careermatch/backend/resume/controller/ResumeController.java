@@ -18,6 +18,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -44,6 +45,7 @@ public class ResumeController {
     private final UserRepository userRepository;
     private final StudentRepository studentRepository;
     private final RabbitTemplate rabbitTemplate;
+    private final ApplicationEventPublisher eventPublisher;
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAuthority('ROLE_STUDENT')")
@@ -74,11 +76,15 @@ public class ResumeController {
             
             Resume saved = resumeRepository.save(resume);
 
-            // 3. Dispatch background task via RabbitMQ
+            // 3. Dispatch background task via RabbitMQ, fallback to Spring ApplicationEvent if RabbitMQ is offline
             ResumeUploadedEvent event = new ResumeUploadedEvent(saved.getId(), student.getId());
-            rabbitTemplate.convertAndSend(QueueConfig.EXCHANGE, QueueConfig.RESUME_UPLOADED_ROUTING_KEY, event);
-            
-            log.info("Resume uploaded for student {}. Dispatched parsing task.", student.getId());
+            try {
+                rabbitTemplate.convertAndSend(QueueConfig.EXCHANGE, QueueConfig.RESUME_UPLOADED_ROUTING_KEY, event);
+                log.info("Resume uploaded for student {}. Dispatched parsing task via RabbitMQ.", student.getId());
+            } catch (Exception e) {
+                log.warn("RabbitMQ not available. Falling back to local in-process event listener to process resume {}: {}", saved.getId(), e.getMessage());
+                eventPublisher.publishEvent(event);
+            }
 
             ResumeResponse response = ResumeResponse.builder()
                     .id(saved.getId())

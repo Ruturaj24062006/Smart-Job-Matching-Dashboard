@@ -6,6 +6,8 @@ import com.careermatch.backend.resume.service.ResumeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -16,8 +18,10 @@ public class ResumeTaskListener {
     private final ResumeService resumeService;
 
     @RabbitListener(queues = QueueConfig.RESUME_UPLOADED_QUEUE)
+    @EventListener
+    @Async
     public void handleResumeUploaded(ResumeUploadedEvent event) {
-        log.info("Received ResumeUploadedEvent for resume ID: {}", event.getResumeId());
+        log.info("Received ResumeUploadedEvent (RabbitMQ or Local) for resume ID: {}", event.getResumeId());
         try {
             resumeService.processResume(event.getResumeId());
         } catch (Exception e) {

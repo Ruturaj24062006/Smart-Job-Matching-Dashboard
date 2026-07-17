@@ -1,0 +1,297 @@
+<app-navbar></app-navbar>
+
+<main class="landing-page">
+  <!-- Hero Section -->
+  <section class="hero-section container animate-fade-in">
+    <div class="hero-content">
+      <h1 class="hero-title">
+        Stop applying blind.<br>
+        Know exactly why you match — <br>
+        <span class="highlight-italic">before</span> you apply.
+      </h1>
+      <p class="hero-subtitle">
+        NEXUS uses proprietary recruiter intelligence to show you exactly how your profile ranks against job requirements, visa needs, and skill gaps.
+      </p>
+      <div class="hero-actions">
+        <a href="/register" class="btn btn-primary">Get Started</a>
+        <a href="#how-it-works" class="btn btn-secondary">See How It Works</a>
+      </div>
+    </div>
+    
+    <!-- Hero Demo Job Card -->
+    <div class="hero-preview-card animate-float">
+      <app-job-card
+        title="software engineering intern"
+        companyName="Smart Job Matching Co."
+        location="San Francisco, CA &bull; Hybrid"
+        [matchScore]="84"
+        [techSkillsCount]="6"
+        [techSkillsTotal]="7"
+        [skills]="demoJobSkills"
+        [workEducationMatched]="true"
+        [visaEligible]="true"
+        aiFeedback="Your profile matches 84% of components, indicating highly relevant experience in enterprise backend services and database optimization."
+      ></app-job-card>
+    </div>
+  </section>
+
+  <!-- Trusted By Universities -->
+  <section class="trust-section">
+    <div class="container text-center">
+      <p class="trust-label">TRUSTED BY STUDENTS FROM</p>
+      <div class="logo-grid">
+        <span class="uni-logo">Stanford</span>
+        <span class="uni-logo">NYU</span>
+        <span class="uni-logo">Georgia Tech</span>
+        <span class="uni-logo">UMass</span>
+        <span class="uni-logo">UCLA</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Old Way vs NEXUS Way Section -->
+  <section id="how-it-works" class="comparison-section container">
+    <h2 class="section-title text-center">Job boards show you everything.<br>They tell you nothing.</h2>
+    
+    <div class="comparison-grid">
+      <!-- Old Way Card -->
+      <div class="comparison-card old-way">
+        <div class="card-tag">THE OLD WAY</div>
+        <ul class="comparison-list">
+          <li>
+            <span class="icon-cross">&times;</span>
+            <span class="list-text">Apply to 100 jobs and hope and pray.</span>
+          </li>
+          <li>
+            <span class="icon-cross">&times;</span>
+            <span class="list-text">Silent rejections because of visa filtering you couldn't see.</span>
+          </li>
+          <li>
+            <span class="icon-cross">&times;</span>
+            <span class="list-text">Zero feedback on why your resume wasn't picked up.</span>
+          </li>
+        </ul>
+      </div>
+      
+      <!-- NEXUS Way Card -->
+      <div class="comparison-card nexus-way">
+        <div class="card-tag">THE NEXUS WAY</div>
+        <ul class="comparison-list">
+          <li>
+            <span class="icon-check">&#10003;</span>
+            <span class="list-text">Target roles where you are a Top 5% match.</span>
+          </li>
+          <li>
+            <span class="icon-check">&#10003;</span>
+            <span class="list-text">Real-time sponsorship transparency insights.</span>
+          </li>
+          <li>
+            <span class="icon-check">&#10003;</span>
+            <span class="list-text">AI-driven gap analysis: Know what to learn next.</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Feature 1: Explainable Match Score -->
+  <section class="feature-section container">
+    <div class="feature-grid">
+      <div class="feature-visual">
+        <div class="preview-mini-card">
+          <div class="mini-card-header">
+            <span class="mini-title">Explain Match</span>
+            <span class="mini-score">84% Match</span>
+          </div>
+          <p class="mini-text">"Your resume shows 80% relevance in database transactions, which matches the team's priority for high-throughput Postgres systems."</p>
+        </div>
+      </div>
+      
+      <div class="feature-info">
+        <h2 class="feature-title">Explainable match scores, not black-box percentages</h2>
+        <p class="feature-desc">
+          NEXUS doesn't just give you a random number. We parse the specific requirements of the job description and compare them against your resume to explain exactly why you qualify, using custom recruiter heuristics.
+        </p>
+        <a href="/register" class="feature-link">Learn about the algorithm &rarr;</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Feature 2: One Profile, Every Opportunity -->
+  <section class="feature-section container">
+    <div class="feature-grid reverse">
+      <div class="feature-visual dashboard-mockup">
+        <div class="mockup-frame">
+          <div class="mockup-bar">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="url">nexus.ai/dashboard</span>
+          </div>
+          <div class="mockup-content">
+            <div class="mockup-header">
+              <span class="mock-avatar"></span>
+              <span class="mock-nav-item">Active Profile</span>
+              <span class="mock-nav-item active">Matches</span>
+            </div>
+            <div class="mockup-body">
+              <div class="mock-sidebar">
+                <span class="mock-bar-line"></span>
+                <span class="mock-bar-line"></span>
+                <span class="mock-bar-line"></span>
+              </div>
+              <div class="mock-main">
+                <span class="mock-title-line"></span>
+                <span class="mock-desc-line"></span>
+                <span class="mock-desc-line"></span>
+                <div class="mock-grid">
+                  <span class="mock-card"></span>
+                  <span class="mock-card"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="feature-info">
+        <h2 class="feature-title">One profile, every opportunity</h2>
+        <p class="feature-desc">
+          Stop tailoring your resume over and over. Upload your master resume once. Our vector embedding pipeline maps your core capabilities and translates it contextually for every role you view.
+        </p>
+        <div class="feature-bullets">
+          <span class="tag tag-red">Skills Database</span>
+          <span class="tag tag-red">JPA & REST AI</span>
+          <span class="tag tag-red">AI Resume Optimizer</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Feature 3: Recruiters Dashboard -->
+  <section class="feature-section container">
+    <div class="feature-grid">
+      <div class="feature-visual recruiter-mockup">
+        <div class="mockup-frame">
+          <div class="mockup-bar">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="url">nexus.ai/recruiter</span>
+          </div>
+          <div class="mockup-content">
+            <div class="mockup-header-rec">
+              <span class="rec-logo">Recruiter Suite</span>
+            </div>
+            <div class="mockup-body-rec">
+              <span class="mock-rec-title">Applicants List</span>
+              <div class="mock-rec-table">
+                <div class="table-row header">
+                  <span>Candidate</span><span>Score</span><span>Status</span>
+                </div>
+                <div class="table-row">
+                  <span>John Doe</span><span class="green-score">91%</span><span>Shortlisted</span>
+                </div>
+                <div class="table-row">
+                  <span>Jane Smith</span><span class="orange-score">84%</span><span>Reviewing</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="feature-info">
+        <h2 class="feature-title">Built for how recruiters actually hire</h2>
+        <p class="feature-desc">
+          NEXUS isn't just a candidate tool. We provide recruiters with automated filtering pipelines, scoring candidate pools instantaneously by matching candidate profiles with job embeddings.
+        </p>
+        <ul class="feature-list-simple">
+          <li>
+            <span class="list-bullet">&bull;</span>
+            <span>Direct Recruiter Inbox Routing</span>
+          </li>
+          <li>
+            <span class="list-bullet">&bull;</span>
+            <span>Verified Applicant Pool Analytics</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step Workflow -->
+  <section class="workflow-section">
+    <div class="container">
+      <h2 class="section-title text-center">The Intelligence Path</h2>
+      
+      <div class="workflow-grid">
+        <div class="workflow-step">
+          <div class="step-num">01</div>
+          <h3 class="step-title">Import Profile</h3>
+          <p class="step-desc">Upload your resume PDF. Our MiniLM local transformer maps your profile into embeddings instantly.</p>
+        </div>
+        
+        <div class="workflow-step">
+          <div class="step-num">02</div>
+          <h3 class="step-title">Get Matched</h3>
+          <p class="step-desc">View roles scored using Reciprocal Rank Fusion, highlighting exact gaps and roadmap plans.</p>
+        </div>
+        
+        <div class="workflow-step">
+          <div class="step-num">03</div>
+          <h3 class="step-title">Apply with Clarity</h3>
+          <p class="step-desc">Submit your application knowing exactly why you match and have the credentials to prove it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonials Grid -->
+  <section class="testimonials-section container">
+    <h2 class="section-title text-center">What students are saying</h2>
+    <div class="testimonials-grid">
+      <div *ngFor="let t of testimonials" class="testimonial-card glass-card">
+        <p class="testimonial-quote">"{{ t.quote }}"</p>
+        <div class="testimonial-author">
+          <div class="author-avatar">{{ t.avatarLetter }}</div>
+          <div class="author-meta">
+            <h4 class="author-name">{{ t.name }}</h4>
+            <span class="author-role">{{ t.role }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Comparison Table -->
+  <section class="table-section container">
+    <h2 class="section-title text-center">The Intelligence Gap</h2>
+    
+    <div class="table-container">
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Traditional Boards</th>
+            <th class="highlight-col">NEXUS AI</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of comparisonTable">
+            <td class="feature-name">{{ row.title }}</td>
+            <td class="traditional-val">{{ row.traditional }}</td>
+            <td class="nexus-val highlight-col">{{ row.nexus }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="cta-section container text-center">
+    <div class="cta-box">
+      <h2 class="cta-title">Find roles that actually fit — starting today</h2>
+      <p class="cta-desc">Join thousands of students and developers using NEXUS to navigate their careers with real-time intelligence.</p>
+      <a href="/register" class="btn btn-primary">Get Started For Free</a>
+    </div>
+  </section>
+</main>
+
+<app-footer></app-footer>

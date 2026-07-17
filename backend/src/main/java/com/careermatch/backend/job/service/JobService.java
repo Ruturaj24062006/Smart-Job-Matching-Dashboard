@@ -16,6 +16,7 @@ import com.careermatch.backend.recruiter.repository.RecruiterRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +33,7 @@ public class JobService {
     private final UserRepository userRepository;
     private final EmbeddingService embeddingService;
     private final RabbitTemplate rabbitTemplate;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public Job createJob(JobRequest request, String recruiterEmail) {
@@ -66,9 +68,15 @@ public class JobService {
         Job saved = jobRepository.save(job);
         log.info("Posted job ID: {} by Recruiter: {}", saved.getId(), recruiter.getId());
 
-        // Dispatch JobPostedEvent to trigger match updates for all students
+        // Dispatch JobPostedEvent to trigger match updates for all students, fallback to Spring ApplicationEvent if RabbitMQ is offline
         JobPostedEvent event = new JobPostedEvent(saved.getId(), recruiter.getCompany().getId());
-        rabbitTemplate.convertAndSend(QueueConfig.EXCHANGE, QueueConfig.JOB_POSTED_ROUTING_KEY, event);
+        try {
+            rabbitTemplate.convertAndSend(QueueConfig.EXCHANGE, QueueConfig.JOB_POSTED_ROUTING_KEY, event);
+            log.info("JobPostedEvent dispatched via RabbitMQ for job ID: {}", saved.getId());
+        } catch (Exception e) {
+            log.warn("RabbitMQ not available. Falling back to local in-process event listener to update candidate matches for job {}: {}", saved.getId(), e.getMessage());
+            eventPublisher.publishEvent(event);
+        }
 
         return saved;
     }

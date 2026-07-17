@@ -11,6 +11,8 @@ import com.careermatch.backend.resume.repository.ResumeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -25,8 +27,10 @@ public class JobTaskListener {
     private final MatchingService matchingService;
 
     @RabbitListener(queues = QueueConfig.JOB_POSTED_QUEUE)
+    @EventListener
+    @Async
     public void handleJobPosted(JobPostedEvent event) {
-        log.info("Received JobPostedEvent for job ID: {}", event.getJobId());
+        log.info("Received JobPostedEvent (RabbitMQ or Local) for job ID: {}", event.getJobId());
         try {
             Job job = jobRepository.findById(event.getJobId())
                     .orElseThrow(() -> new ResourceNotFoundException("Job not found: " + event.getJobId()));

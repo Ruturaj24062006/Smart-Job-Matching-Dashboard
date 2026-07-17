@@ -1,0 +1,72 @@
+<div class="job-match-card">
+  <!-- Card Header Row -->
+  <div class="card-header">
+    <div class="job-meta">
+      <h3 class="job-title">{{ title }}</h3>
+      <div class="company-info">{{ companyName }} &bull; {{ location }}</div>
+    </div>
+    
+    <div class="match-score-container">
+      <div class="score-radial">
+        <svg viewBox="0 0 36 36" class="circular-chart">
+          <path class="circle-bg"
+            d="M18 2.0845
+              a 15.9155 15.9155 0 0 1 0 31.831
+              a 15.9155 15.9155 0 0 1 0 -31.831"
+          />
+          <path class="circle"
+            [attr.stroke-dasharray]="matchScore + ', 100'"
+            d="M18 2.0845
+              a 15.9155 15.9155 0 0 1 0 31.831
+              a 15.9155 15.9155 0 0 1 0 -31.831"
+          />
+          <text x="18" y="20.35" class="percentage">{{ matchScore }}%</text>
+        </svg>
+      </div>
+      <div class="score-label">Strong Match</div>
+    </div>
+  </div>
+  
+  <!-- Matching Checkpoints -->
+  <div class="checkpoints-container">
+    <!-- Technical Skills Checkpoint -->
+    <div class="checkpoint-row">
+      <span class="checkpoint-label">Technical Skills</span>
+      <div class="checkpoint-val-skills">
+        <span class="skills-ratio tag tag-red">{{ techSkillsCount }}/{{ techSkillsTotal }}</span>
+        <div class="skills-pill-box">
+          <span *ngFor="let s of skills" class="skill-badge" [class.matched]="s.matched">
+            {{ s.name }}
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Work & Education Checkpoint -->
+    <div class="checkpoint-row">
+      <span class="checkpoint-label">Work & Education</span>
+      <div class="checkpoint-val">
+        <svg *ngIf="workEducationMatched" class="icon-success" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+        </svg>
+      </div>
+    </div>
+    
+    <!-- Visa Sponsorship Checkpoint -->
+    <div class="checkpoint-row">
+      <span class="checkpoint-label">Visa Sponsorship / Eligibility</span>
+      <div class="checkpoint-val">
+        <svg *ngIf="visaEligible" class="icon-success" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+        </svg>
+      </div>
+    </div>
+  </div>
+  
+  <!-- AI Recruiter Explanation -->
+  <div class="ai-feedback-container">
+    <p class="ai-feedback-text">
+      "{{ aiFeedback }}"
+    </p>
+  </div>
+</div>
