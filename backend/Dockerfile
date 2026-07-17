@@ -14,4 +14,5 @@ WORKDIR /app
 COPY --from=build /app/target/career-match-backend-0.0.1-SNAPSHOT.jar app.jar
 
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENV JAVA_OPTS="-Xmx350m -Xms128m -XX:+UseContainerSupport -XX:MaxRAMPercentage=70.0"
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

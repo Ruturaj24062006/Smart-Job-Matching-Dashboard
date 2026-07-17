@@ -121,10 +121,10 @@
 			<version>${tika.version}</version>
 		</dependency>
 
-		<!-- LangChain4j for In-Process Embedding Generation -->
+		<!-- LangChain4j for In-Process Embedding Generation (quantized model for low-RAM environments) -->
 		<dependency>
 			<groupId>dev.langchain4j</groupId>
-			<artifactId>langchain4j-embeddings-all-minilm-l6-v2</artifactId>
+			<artifactId>langchain4j-embeddings-all-minilm-l6-v2-q</artifactId>
 			<version>${langchain4j.version}</version>
 		</dependency>
 
