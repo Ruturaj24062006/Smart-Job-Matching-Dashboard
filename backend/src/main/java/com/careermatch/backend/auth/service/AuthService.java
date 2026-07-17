@@ -74,7 +74,6 @@ public class AuthService {
         // 3. Initialize profile details
         if (request.getRole() == UserRole.ROLE_STUDENT) {
             Student student = Student.builder()
-                    .id(savedUser.getId())
                     .user(savedUser)
                     .firstName(request.getFirstName())
                     .lastName(request.getLastName())
@@ -93,7 +92,6 @@ public class AuthService {
                         ));
             }
             Recruiter recruiter = Recruiter.builder()
-                    .id(savedUser.getId())
                     .user(savedUser)
                     .company(company)
                     .jobTitle(request.getJobTitle())
