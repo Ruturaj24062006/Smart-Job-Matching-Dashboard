@@ -2,10 +2,8 @@ services:
   # 1. Spring Boot Backend Web Service
   - type: web
     name: nexus-backend
-    env: java
-    rootDir: backend
-    buildCommand: ./mvnw clean package -DskipTests
-    startCommand: java -jar target/career-match-backend-0.0.1-SNAPSHOT.jar
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
     plan: free
     envVars:
       - key: DB_HOST
