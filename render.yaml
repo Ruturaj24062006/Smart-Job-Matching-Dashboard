@@ -30,11 +30,12 @@ services:
         generateValue: true
 
   # 2. Angular Frontend Static Site
-  - type: static
+  - type: web
     name: nexus-frontend
+    runtime: static
     rootDir: frontend
     buildCommand: npm run build
-    publishDir: dist/frontend/browser
+    staticPublishPath: dist/frontend/browser
     routes:
       # SPA Rewrite Rule to support Angular routing redirects
       - type: rewrite
