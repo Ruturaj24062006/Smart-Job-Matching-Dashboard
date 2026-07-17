@@ -1,11 +1,30 @@
 spring:
 
-  # Use Render's PORT environment variable
-  # Database config is inherited from application.yml with env var overrides
+  # Database connection pool tuning for Supabase free tier
+  # Supabase session-mode pooler is limited to 15 connections max
+  # Using transaction-mode pooler (port 6543) for better connection efficiency
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:6543}/${DB_NAME:postgres}?prepareThreshold=0&sslmode=require
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:password}
+    hikari:
+      minimum-idle: 2
+      maximum-pool-size: 5
+      idle-timeout: 30000
+      connection-timeout: 20000
+      max-lifetime: 1200000
+
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        # Disable prepared statement caching - required for Supabase transaction-mode pooler
+        jdbc:
+          lob:
+            non_contextual_creation: true
 
 server:
   port: ${PORT:8080}
@@ -15,3 +34,4 @@ logging:
     root: INFO
     com.careermatch: INFO
     org.hibernate.SQL: WARN
+    com.zaxxer.hikari: WARN
