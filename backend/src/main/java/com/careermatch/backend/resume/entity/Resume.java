@@ -41,6 +41,7 @@ public class Resume {
     private float[] embedding;
 
     @Column(name = "is_current", nullable = false)
+    @Builder.Default
     private boolean isCurrent = true;
 
     @CreationTimestamp

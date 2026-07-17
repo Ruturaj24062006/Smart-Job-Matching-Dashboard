@@ -12,6 +12,11 @@ public class ExtractedProfile {
     private List<ExperienceDto> experience;
     private List<ProjectDto> projects;
     private List<CertificationDto> certifications;
+    private String languages;
+    private String githubUrl;
+    private String linkedinUrl;
+    private String portfolioUrl;
+    private String careerPreferences;
 
     @Data
     public static class SkillDto {

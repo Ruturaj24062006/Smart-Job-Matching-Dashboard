@@ -31,6 +31,7 @@ public class User {
     private UserRole role;
 
     @Column(name = "is_verified", nullable = false)
+    @Builder.Default
     private boolean isVerified = false;
 
     @Column(name = "verification_token")

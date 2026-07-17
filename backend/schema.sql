@@ -45,6 +45,11 @@ CREATE TABLE IF NOT EXISTS students (
     last_name VARCHAR(255),
     bio TEXT,
     profile_completed_pct INT NOT NULL DEFAULT 0,
+    github_url VARCHAR(255),
+    linkedin_url VARCHAR(255),
+    portfolio_url VARCHAR(255),
+    career_preferences VARCHAR(255),
+    languages VARCHAR(255),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP
 );

@@ -58,7 +58,12 @@ public class GroqService {
                   ],
                   "certifications": [
                     {"name": "Cert name", "issuingOrganization": "Org name", "issueDate": "YYYY-MM-DD", "expirationDate": "YYYY-MM-DD"}
-                  ]
+                  ],
+                  "languages": "English, Spanish",
+                  "githubUrl": "https://github.com/username",
+                  "linkedinUrl": "https://linkedin.com/in/username",
+                  "portfolioUrl": "https://portfolio.com",
+                  "careerPreferences": "Software Engineer, Remote"
                 }
                 Make sure any missing date fields are omitted or set to null.
                 """;
@@ -159,7 +164,12 @@ public class GroqService {
                   ],
                   "certifications": [
                     {"name": "AWS Certified Developer", "issuingOrganization": "Amazon Web Services", "issueDate": "2025-01-10", "expirationDate": "2028-01-10"}
-                  ]
+                  ],
+                  "languages": "English, German",
+                  "githubUrl": "https://github.com/johndoe",
+                  "linkedinUrl": "https://linkedin.com/in/johndoe",
+                  "portfolioUrl": "https://johndoe.dev",
+                  "careerPreferences": "Software Engineer, Remote"
                 }
                 """;
     }

@@ -40,6 +40,7 @@ public class Match {
     private Double compositeScore;
 
     @Column(name = "eligibility_status", nullable = false)
+    @Builder.Default
     private boolean eligibilityStatus = false;
 
     @Column(name = "explanation", columnDefinition = "TEXT")

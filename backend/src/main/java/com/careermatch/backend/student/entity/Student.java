@@ -47,7 +47,14 @@ public class Student {
     private String bio;
 
     @Column(name = "profile_completed_pct")
+    @Builder.Default
     private int profileCompletedPct = 0;
+
+    @Column(name = "career_preferences")
+    private String careerPreferences;
+
+    @Column(name = "languages")
+    private String languages;
 
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

@@ -86,6 +86,11 @@ public class ResumeService {
     private void updateStudentProfile(Student student, ExtractedProfile profile) {
         if (profile.getFirstName() != null) student.setFirstName(profile.getFirstName());
         if (profile.getLastName() != null) student.setLastName(profile.getLastName());
+        if (profile.getLanguages() != null) student.setLanguages(profile.getLanguages());
+        if (profile.getGithubUrl() != null) student.setGithubUrl(profile.getGithubUrl());
+        if (profile.getLinkedinUrl() != null) student.setLinkedinUrl(profile.getLinkedinUrl());
+        if (profile.getPortfolioUrl() != null) student.setPortfolioUrl(profile.getPortfolioUrl());
+        if (profile.getCareerPreferences() != null) student.setCareerPreferences(profile.getCareerPreferences());
 
         // Clear existing profile relations
         student.getSkills().clear();

@@ -37,6 +37,7 @@ public class Application {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private ApplicationStatus status = ApplicationStatus.APPLIED;
 
     @Column(name = "cover_letter", columnDefinition = "TEXT")
