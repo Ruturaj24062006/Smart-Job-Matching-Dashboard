@@ -9,15 +9,12 @@ RUN tr -d '\r' < mvnw > mvnw.tmp && mv mvnw.tmp mvnw && chmod +x mvnw && ./mvnw 
 
 FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
-# Install libstdc++6 (required by ONNX runtime), python3, and pip
+# Install libstdc++6 (required by ONNX runtime), python3, and pre-compiled python3-pymupdf from Ubuntu repo
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libstdc++6 \
     python3 \
-    python3-pip \
+    python3-pymupdf \
     && rm -rf /var/lib/apt/lists/*
-
-# Install PyMuPDF for resume processing
-RUN pip3 install --no-cache-dir pymupdf --break-system-packages
 
 COPY --from=build /app/target/career-match-backend-0.0.1-SNAPSHOT.jar app.jar
 
