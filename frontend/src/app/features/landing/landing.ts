@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { NgFor } from '@angular/common';
+import { NgFor, NgIf, NgClass } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Navbar } from '../../shared/components/navbar/navbar';
 import { Footer } from '../../shared/components/footer/footer';
@@ -18,13 +18,43 @@ interface LandingFeatureRow {
   nexus: string;
 }
 
+interface LandingFaqItem {
+  question: string;
+  answer: string;
+}
+
 @Component({
   selector: 'app-landing',
-  imports: [NgFor, RouterLink, Navbar, Footer, JobCard],
+  imports: [NgFor, NgIf, NgClass, RouterLink, Navbar, Footer, JobCard],
   templateUrl: './landing.html',
   styleUrl: './landing.css'
 })
 export class Landing {
+  // FAQ Accordion State
+  protected openFaqIndex: number | null = null;
+
+  protected toggleFaq(index: number): void {
+    this.openFaqIndex = this.openFaqIndex === index ? null : index;
+  }
+
+  protected readonly faqs: LandingFaqItem[] = [
+    {
+      question: "How does the match score calculation work?",
+      answer: "NEXUS uses custom recruiter-inspired heuristics and semantic vector embeddings to analyze the compatibility between your profile and the job description across technical skills, education alignment, behavioral fit, and experience depth."
+    },
+    {
+      question: "Do I need to upload a resume to see matching jobs?",
+      answer: "No! If you don't upload a resume, you can quickly onboard by inputting your primary skills, target role, and location. NEXUS will calculate match scores based on your inputted profile."
+    },
+    {
+      question: "Is there any visa and sponsorship tracking?",
+      answer: "Yes, NEXUS parses job listings for sponsorship availability and compares it with your career preferences to highlight visa constraints before you apply."
+    },
+    {
+      question: "How do recruiters see my applications?",
+      answer: "Recruiters see applications organized into status bins (Applied, Under Review, Shortlisted, Interview, Selected, Rejected) sorted by match score rank."
+    }
+  ];
   // Testimonials content
   protected readonly testimonials: LandingTestimonial[] = [
     {

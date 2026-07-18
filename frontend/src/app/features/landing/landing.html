@@ -246,7 +246,7 @@
   </section>
 
   <!-- Comparison Table -->
-  <section id="pricing" class="table-section container">
+  <section id="comparison" class="table-section container">
     <h2 class="section-title text-center">The Intelligence Gap</h2>
     
     <div class="table-container">
@@ -266,6 +266,22 @@
           </tr>
         </tbody>
       </table>
+    </div>
+  </section>
+
+  <!-- FAQ Section -->
+  <section id="faq" class="faq-section container animate-fade-in">
+    <h2 class="section-title text-center">Frequently Asked Questions</h2>
+    <div class="faq-wrapper">
+      <div *ngFor="let item of faqs; let i = index" class="faq-item glass-card" [class.faq-open]="openFaqIndex === i">
+        <div class="faq-question" (click)="toggleFaq(i)">
+          <h3>{{ item.question }}</h3>
+          <span class="faq-toggle-icon">{{ openFaqIndex === i ? '−' : '+' }}</span>
+        </div>
+        <div class="faq-answer" *ngIf="openFaqIndex === i">
+          <p>{{ item.answer }}</p>
+        </div>
+      </div>
     </div>
   </section>
 

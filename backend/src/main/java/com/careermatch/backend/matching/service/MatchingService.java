@@ -107,7 +107,9 @@ public class MatchingService {
                     .eligibilityStatus(eligible)
                     .build();
         }
-        return matchRepository.save(match);
+        Match saved = matchRepository.save(match);
+        invalidateCache(student.getId());
+        return saved;
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -125,9 +127,12 @@ public class MatchingService {
         // Cache read
         try {
             Object cached = redisTemplate.opsForValue().get(cacheKey);
-            if (cached instanceof List<?> list && !list.isEmpty()) {
-                log.debug("Cache HIT for student {} matches.", studentId);
-                return (List<Match>) list;
+            if (cached instanceof List) {
+                List<?> list = (List<?>) cached;
+                if (!list.isEmpty()) {
+                    log.debug("Cache HIT for student {} matches.", studentId);
+                    return (List<Match>) list;
+                }
             }
         } catch (Exception e) {
             log.warn("Redis cache read failed for student {}: {}. Falling back to DB.", studentId, e.getMessage());

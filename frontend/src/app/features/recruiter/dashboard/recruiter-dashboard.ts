@@ -132,7 +132,25 @@ export class RecruiterDashboard implements OnInit, OnDestroy {
     jobTitle: ''
   };
   isUpdatingProfile = signal<boolean>(false);
+  isEditMode = signal<boolean>(false);
   profileMessage = signal<string | null>(null);
+
+  toggleEditMode(edit: boolean): void {
+    if (!edit) {
+      if (this.profile) {
+        this.companyForm = {
+          companyName: this.profile.companyName || '',
+          industry: this.profile.industry || '',
+          websiteUrl: this.profile.websiteUrl || '',
+          location: this.profile.location || '',
+          description: this.profile.description || '',
+          logoUrl: this.profile.logoUrl || '',
+          jobTitle: this.profile.jobTitle || ''
+        };
+      }
+    }
+    this.isEditMode.set(edit);
+  }
 
   // Settings
   passwordForm = {
@@ -683,6 +701,9 @@ export class RecruiterDashboard implements OnInit, OnDestroy {
       const sub = menu.split('-')[1] || 'ALL';
       this.selectedApplicationFilter.set(sub.toUpperCase());
       this.loadFilteredApplications();
+    } else if (menu === 'profile') {
+      this.isEditMode.set(false);
+      this.checkOnboardingStatus();
     }
   }
 
@@ -1196,6 +1217,7 @@ export class RecruiterDashboard implements OnInit, OnDestroy {
         this.isUpdatingProfile.set(false);
         if (res.success) {
           this.profileMessage.set('✓ Company profile updated successfully.');
+          this.isEditMode.set(false);
           this.checkOnboardingStatus();
         }
       },

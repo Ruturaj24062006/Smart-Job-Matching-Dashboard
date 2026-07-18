@@ -60,7 +60,7 @@ public class RecruiterService {
                     .recentApplications(List.of()).build();
         }
 
-        List<Job> companyJobs = jobRepository.findByCompanyId(company.getId());
+        List<Job> companyJobs = jobRepository.findByRecruiterId(recruiter.getId());
         List<UUID> jobIds = companyJobs.stream().map(Job::getId).collect(Collectors.toList());
 
         long activeJobs = companyJobs.stream()
