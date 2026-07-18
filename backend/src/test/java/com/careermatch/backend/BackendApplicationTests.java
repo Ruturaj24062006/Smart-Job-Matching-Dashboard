@@ -8,9 +8,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @SpringBootTest
 class BackendApplicationTests {
 
-	@Autowired
-	private JdbcTemplate jdbcTemplate;
-
 	@Test
 	void contextLoads() {
 	}
