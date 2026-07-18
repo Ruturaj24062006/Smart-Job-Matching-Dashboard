@@ -414,7 +414,7 @@
       </div>
 
       <div class="glass-card job-form-card">
-        <!-- 4-Step Stepper Header -->
+        <!-- 5-Step Stepper Header -->
         <div class="step-indicator-row-5" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid var(--border-light); padding-bottom: 1rem;">
           <!-- Step 1 -->
           <div class="step-bubble-5" [class.active]="jobStep() === 1" [class.completed]="jobStep() > 1" style="display: flex; align-items: center; gap: 0.5rem; opacity: 0.5;" [style.opacity]="jobStep() === 1 ? '1' : '0.5'">
@@ -444,11 +444,20 @@
           </div>
 
           <!-- Step 4 -->
-          <div class="step-bubble-5" [class.active]="jobStep() === 4" style="display: flex; align-items: center; gap: 0.5rem; opacity: 0.5;" [style.opacity]="jobStep() === 4 ? '1' : '0.5'">
+          <div class="step-bubble-5" [class.active]="jobStep() === 4" [class.completed]="jobStep() > 4" style="display: flex; align-items: center; gap: 0.5rem; opacity: 0.5;" [style.opacity]="jobStep() === 4 ? '1' : '0.5'">
             <div class="step-num-icon" style="width: 28px; height: 28px; border-radius: 50%; background: var(--primary-color); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem;">
-              <span>4</span>
+              <span *ngIf="jobStep() <= 4">4</span>
+              <svg *ngIf="jobStep() > 4" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24" width="14" height="14" style="color: #fff;"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
             </div>
             <span class="step-lbl" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">Compensation</span>
+          </div>
+
+          <!-- Step 5 -->
+          <div class="step-bubble-5" [class.active]="jobStep() === 5" style="display: flex; align-items: center; gap: 0.5rem; opacity: 0.5;" [style.opacity]="jobStep() === 5 ? '1' : '0.5'">
+            <div class="step-num-icon" style="width: 28px; height: 28px; border-radius: 50%; background: var(--primary-color); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem;">
+              <span>5</span>
+            </div>
+            <span class="step-lbl" style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">Preview</span>
           </div>
         </div>
 
@@ -472,6 +481,7 @@
                 <h4 class="ai-card-title" style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--text-primary);">NEXUS AI Job Planner</h4>
               </div>
               <p class="ai-card-desc" style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">Provide a short role outline and our neural network will generate descriptions and skill recommendations instantly.</p>
+              <label class="form-label" style="font-weight: 700; margin-bottom: 0.35rem; display: block; font-size: 0.9rem; color: var(--text-primary);">Job Role / Outline *</label>
               <textarea class="form-input ai-textarea" [(ngModel)]="aiPrompt" placeholder="e.g. 'Looking for a Backend Developer with Java and Spring Boot...'" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-light); margin-bottom: 1rem;" rows="3"></textarea>
               <button type="button" class="btn btn-primary" (click)="useAiAssist()" [disabled]="isAiLoading()">
                 <span *ngIf="!isAiLoading()">Generate Job Specifications</span>
@@ -574,12 +584,20 @@
 
             <div class="form-group">
               <label class="form-label" style="font-weight: 700; margin-bottom: 0.35rem; display: block;">Application Deadline</label>
-              <input type="date" [(ngModel)]="jobForm.deadline" class="form-input" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-light);">
+              <input type="date" #deadlineInput2 (click)="deadlineInput2.showPicker()" [(ngModel)]="jobForm.deadline" class="form-input" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-light);">
             </div>
+          </div>
+        </div>
+
+        <!-- STEP 5: JOB PREVIEW -->
+        <div class="step-content animate-fade-in" *ngIf="jobStep() === 5">
+          <div class="workspace-header" style="margin-bottom: 1.5rem;">
+            <h2 style="margin: 0; font-size: 1.2rem; font-weight: 800; color: var(--text-primary);">Review & Preview</h2>
+            <p style="margin: 0; font-size: 0.85rem; color: var(--text-secondary);">Verify your job listing details before final publication.</p>
           </div>
 
           <!-- Preview Card -->
-          <div class="job-preview-box glass-card" style="margin-top: 1.5rem; padding: 1.5rem; border: 1px dashed rgba(var(--primary-rgb), 0.3); border-radius: 12px; background: rgba(var(--primary-rgb), 0.03);">
+          <div class="job-preview-box glass-card" style="margin-bottom: 1.5rem; padding: 1.5rem; border: 1px dashed rgba(var(--primary-rgb), 0.3); border-radius: 12px; background: rgba(var(--primary-rgb), 0.03);">
             <div class="preview-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
               <h3 style="margin: 0; font-size: 0.9rem; font-weight: 700; color: var(--text-secondary);">📋 Job Preview</h3>
               <p class="preview-badge" style="margin: 0; font-size: 0.78rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 20px; background: rgba(var(--primary-rgb), 0.1); color: var(--primary-color);">
@@ -601,8 +619,8 @@
         <div class="form-actions-row" style="margin-top: 2rem; display: flex; justify-content: space-between;">
           <button type="button" class="btn btn-secondary" (click)="prevJobStep()" *ngIf="jobStep() > 1">Previous</button>
           <div *ngIf="jobStep() === 1"></div>
-          <button type="button" class="btn btn-primary" (click)="nextJobStep()" *ngIf="jobStep() < 4">Next Step</button>
-          <button type="button" class="btn btn-success" (click)="submitJob()" *ngIf="jobStep() === 4" [disabled]="isSubmittingJob()">
+          <button type="button" class="btn btn-primary" (click)="nextJobStep()" *ngIf="jobStep() < 5">Next Step</button>
+          <button type="button" class="btn btn-success" (click)="submitJob()" *ngIf="jobStep() === 5" [disabled]="isSubmittingJob()">
             <span *ngIf="!isSubmittingJob()">{{ jobForm.id ? 'Save Changes' : 'Publish Job Listing' }}</span>
             <span *ngIf="isSubmittingJob()" class="spinner-inline"></span>
           </button>

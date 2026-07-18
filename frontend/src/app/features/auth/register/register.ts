@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { NgIf, NgClass } from '@angular/common';
@@ -10,7 +10,7 @@ import { AuthService } from '../../../core/services/auth.service';
   templateUrl: './register.html',
   styleUrl: './register.css'
 })
-export class Register {
+export class Register implements OnInit {
   registerForm: FormGroup;
   selectedRole = signal<'ROLE_STUDENT' | 'ROLE_RECRUITER'>('ROLE_STUDENT');
   isLoading = signal<boolean>(false);
@@ -28,6 +28,12 @@ export class Register {
       password: ['', [Validators.required, Validators.minLength(6)]],
       companyName: ['']
     });
+  }
+
+  ngOnInit(): void {
+    if (this.authService.isAuthenticated()) {
+      this.authService.redirectToDashboard(this.router);
+    }
   }
 
   selectRole(role: 'ROLE_STUDENT' | 'ROLE_RECRUITER'): void {

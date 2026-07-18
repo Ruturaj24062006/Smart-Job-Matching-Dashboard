@@ -29,6 +29,10 @@ export class Login implements OnInit {
   }
 
   ngOnInit(): void {
+    if (this.authService.isAuthenticated()) {
+      this.authService.redirectToDashboard(this.router);
+      return;
+    }
     this.initGoogleSignIn();
   }
 

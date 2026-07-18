@@ -778,12 +778,15 @@ export class RecruiterDashboard implements OnInit, OnDestroy {
   }
 
   addRequiredSkill(): void {
-    const s = this.newRequiredSkill.trim();
-    if (s) {
-      if (!this.requiredSkillsArray.includes(s)) {
-        this.requiredSkillsArray.push(s);
-        this.jobForm.requiredSkills = this.requiredSkillsArray.join(', ');
-      }
+    const raw = this.newRequiredSkill.trim();
+    if (raw) {
+      const skills = raw.split(',').map(item => item.trim()).filter(Boolean);
+      skills.forEach(s => {
+        if (!this.requiredSkillsArray.includes(s)) {
+          this.requiredSkillsArray.push(s);
+        }
+      });
+      this.jobForm.requiredSkills = this.requiredSkillsArray.join(', ');
       this.newRequiredSkill = '';
       this.jobErrorMessage.set(null);
     }

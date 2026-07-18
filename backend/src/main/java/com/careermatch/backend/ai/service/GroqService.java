@@ -231,15 +231,58 @@ public class GroqService {
 
     public String generateJobDetails(String briefPrompt) {
         if ("mock-groq-key".equals(apiKey) || apiKey.isBlank()) {
-            log.warn("Using mock job generation because Groq API Key is not set");
-            return """
-                    {
-                      "description": "We are looking for a skilled Backend Developer with expertise in Java and Spring Boot to join our engineering team. You will design, develop and maintain high-performance REST APIs, work with databases, and collaborate with frontend developers.",
-                      "requiredSkills": "Java, Spring Boot, PostgreSQL, REST APIs, Maven",
-                      "preferredSkills": "Docker, Kubernetes, Redis, AWS, Microservices",
-                      "experienceLevel": "2-4 years of professional experience"
-                    }
-                    """;
+            log.warn("Using dynamic mock job generation based on prompt because Groq API Key is not set");
+            String lower = briefPrompt.toLowerCase();
+            if (lower.contains("frontend") || lower.contains("react") || lower.contains("angular") || lower.contains("vue") || lower.contains("ui") || lower.contains("ux")) {
+                return """
+                        {
+                          "description": "We are looking for a creative and detail-oriented Frontend Developer to join our team. You will build highly responsive, performant user interfaces, translate UX/UI design wireframes into high-quality code, and collaborate with backend developers to build seamless web applications.",
+                          "requiredSkills": "HTML5, CSS3, JavaScript, TypeScript, Angular, React",
+                          "preferredSkills": "Tailwind CSS, RxJS, Redux, SASS, Webpack",
+                          "experienceLevel": "2+ years of frontend development experience"
+                        }
+                        """;
+            } else if (lower.contains("data") || lower.contains("ml") || lower.contains("machine learning") || lower.contains("ai") || lower.contains("intelligence") || lower.contains("python")) {
+                return """
+                        {
+                          "description": "We are seeking a talented Data Scientist / Machine Learning Engineer to design and implement predictive models, analyze complex datasets, and integrate machine learning algorithms into our production workflows.",
+                          "requiredSkills": "Python, SQL, TensorFlow, PyTorch, Scikit-Learn, Pandas",
+                          "preferredSkills": "NumPy, Docker, Jupyter Notebook, AWS, Git",
+                          "experienceLevel": "3+ years of data science or machine learning experience"
+                        }
+                        """;
+            } else if (lower.contains("full stack") || lower.contains("fullstack")) {
+                return """
+                        {
+                          "description": "We are seeking a versatile Full Stack Software Engineer with expertise in building end-to-end web applications. You will be responsible for designing frontend interfaces as well as developing robust backend APIs, databases, and microservices.",
+                          "requiredSkills": "Java, Spring Boot, Angular, TypeScript, PostgreSQL, REST APIs",
+                          "preferredSkills": "Docker, Redis, AWS, Tailwind CSS, Node.js",
+                          "experienceLevel": "2-5 years of full stack web development experience"
+                        }
+                        """;
+            } else if (lower.contains("devops") || lower.contains("cloud") || lower.contains("aws") || lower.contains("kubernetes") || lower.contains("docker")) {
+                return """
+                        {
+                          "description": "We are looking for a DevOps Engineer to join our infrastructure team. You will manage our CI/CD pipelines, automate cloud deployments, optimize system reliability, and monitor infrastructure health.",
+                          "requiredSkills": "AWS, Docker, Kubernetes, CI/CD, Terraform, Bash",
+                          "preferredSkills": "Ansible, Jenkins, Prometheus, Grafana, Linux",
+                          "experienceLevel": "3+ years in cloud infrastructure or devops roles"
+                        }
+                        """;
+            } else {
+                String title = "Software Engineer";
+                if (briefPrompt.trim().length() > 5 && briefPrompt.trim().length() < 50) {
+                    title = briefPrompt.trim();
+                }
+                return String.format("""
+                        {
+                          "description": "We are looking for a motivated and talented %s to join our engineering team. You will work on designing, developing, and deploying scalable features, collaborating with cross-functional teams to deliver high-quality solutions.",
+                          "requiredSkills": "Java, Python, SQL, REST APIs, Git",
+                          "preferredSkills": "Docker, AWS, Redis, Spring Boot, PostgreSQL",
+                          "experienceLevel": "1-3 years of professional software engineering experience"
+                        }
+                        """, title);
+            }
         }
 
         String systemPrompt = """

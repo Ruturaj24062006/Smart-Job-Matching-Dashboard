@@ -18,6 +18,7 @@ import { RecruiterJobs } from './features/recruiter/jobs/recruiter-jobs';
 import { ApplicantRanking } from './features/recruiter/applicant-ranking/applicant-ranking';
 import { AdminDashboard } from './features/admin/dashboard/admin-dashboard';
 import { authGuard, roleGuard } from './core/guards/auth.guard';
+import { anonymousGuard } from './core/guards/anonymous.guard';
 import { inject } from '@angular/core';
 import { AuthService } from './core/services/auth.service';
 import { Router } from '@angular/router';
@@ -25,8 +26,8 @@ import { Router } from '@angular/router';
 export const routes: Routes = [
   // Public routes
   { path: '', component: Landing },
-  { path: 'login', component: Login },
-  { path: 'register', component: Register },
+  { path: 'login', component: Login, canActivate: [anonymousGuard] },
+  { path: 'register', component: Register, canActivate: [anonymousGuard] },
   { path: 'verify-email', component: VerifyEmail },
   { path: 'forgot-password', component: ForgotPassword },
   { path: 'reset-password', component: ResetPassword },

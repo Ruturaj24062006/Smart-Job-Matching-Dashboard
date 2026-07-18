@@ -14,7 +14,7 @@ import { RecruiterProfileService, RecruiterProfileDto } from '../../../core/serv
 })
 export class CreateJob implements OnInit {
   currentStep = signal<number>(1);
-  totalSteps = 4;
+  totalSteps = 5;
   isLoading = signal<boolean>(false);
   isAiLoading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
@@ -71,12 +71,15 @@ export class CreateJob implements OnInit {
   }
 
   addRequiredSkill(): void {
-    const s = this.newRequiredSkill.trim();
-    if (s) {
-      if (!this.requiredSkillsArray.includes(s)) {
-        this.requiredSkillsArray.push(s);
-        this.job.requiredSkills = this.requiredSkillsArray.join(', ');
-      }
+    const raw = this.newRequiredSkill.trim();
+    if (raw) {
+      const skills = raw.split(',').map(item => item.trim()).filter(Boolean);
+      skills.forEach(s => {
+        if (!this.requiredSkillsArray.includes(s)) {
+          this.requiredSkillsArray.push(s);
+        }
+      });
+      this.job.requiredSkills = this.requiredSkillsArray.join(', ');
       this.newRequiredSkill = '';
       this.errorMessage.set(null);
     }
@@ -204,7 +207,7 @@ export class CreateJob implements OnInit {
       next: (res) => {
         this.isLoading.set(false);
         if (res.success) {
-          this.currentStep.set(5); // Success state
+          this.currentStep.set(6); // Success state
         }
       },
       error: (err) => {

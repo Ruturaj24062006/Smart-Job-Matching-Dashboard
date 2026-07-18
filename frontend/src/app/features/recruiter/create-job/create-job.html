@@ -10,7 +10,7 @@
   </div>
 
   <!-- Progress Stepper -->
-  <div class="progress-stepper" *ngIf="currentStep() <= 4">
+  <div class="progress-stepper" *ngIf="currentStep() <= 5">
     <div class="step-indicator" [class.active]="currentStep() >= 1">
       <span class="step-number">1</span>
       <span class="step-text">Role Details</span>
@@ -30,6 +30,11 @@
       <span class="step-number">4</span>
       <span class="step-text">Compensation</span>
     </div>
+    <div class="step-connector-line" [class.active]="currentStep() >= 5"></div>
+    <div class="step-indicator" [class.active]="currentStep() >= 5">
+      <span class="step-number">5</span>
+      <span class="step-text">Preview</span>
+    </div>
   </div>
 
   <!-- Alert Row -->
@@ -44,8 +49,11 @@
       <p>Describe the role in plain language and AI will draft your description and required skills.</p>
     </div>
     <div class="ai-prompt-row">
-      <input type="text" [(ngModel)]="aiPrompt" placeholder="e.g. Backend Developer with Java and Spring Boot" class="form-control ai-prompt-input">
-      <button type="button" class="btn btn-primary ai-generate-btn" (click)="useAiAssist()" [disabled]="isAiLoading()">
+      <div style="flex: 1; display: flex; flex-direction: column; gap: 0.35rem;">
+        <label style="font-weight: 700; font-size: 0.85rem; color: var(--text-primary); text-align: left;">Job Role / Outline *</label>
+        <input type="text" [(ngModel)]="aiPrompt" placeholder="e.g. Backend Developer with Java and Spring Boot" class="form-control ai-prompt-input">
+      </div>
+      <button type="button" class="btn btn-primary ai-generate-btn" (click)="useAiAssist()" [disabled]="isAiLoading()" style="align-self: flex-end;">
         <span *ngIf="!isAiLoading()">Generate ✦</span>
         <span *ngIf="isAiLoading()" class="dot-typing"><span></span><span></span><span></span></span>
       </button>
@@ -151,7 +159,7 @@
     </div>
 
     <!-- ═══════════ STEP 4: Compensation & Timeline ═══════════ -->
-    <div class="step-content" *ngIf="currentStep() === 4">
+    <div class="step-content animate-fade-in" *ngIf="currentStep() === 4">
       <div class="step-section-header">
         <h2>Compensation & Timeline</h2>
         <p>Set budget range and application deadline parameters.</p>
@@ -170,29 +178,39 @@
 
         <div class="form-group full-width-field">
           <label class="form-label-bold">Application Deadline</label>
-          <input type="date" [(ngModel)]="job.deadline" class="form-control onboard-input">
-        </div>
-      </div>
-
-      <!-- Preview Card -->
-      <div class="job-preview-box glass-card">
-        <div class="preview-header">
-          <h3>📋 Job Preview</h3>
-          <p class="preview-badge">{{ job.jobType.replace('_', ' ') }} · {{ job.workMode }}</p>
-        </div>
-        <h2 class="preview-job-title">{{ job.title || 'Untitled Role' }}</h2>
-        <p class="preview-location">
-          {{ job.location || 'Location not set' }}
-          <span *ngIf="salaryMin || salaryMax"> · ₹{{ salaryMin || 0 }} - ₹{{ salaryMax || 0 }} LPA</span>
-        </p>
-        <div class="preview-skills-row" *ngIf="requiredSkillsArray.length > 0">
-          <span *ngFor="let skill of requiredSkillsArray.slice(0, 5)" class="skill-chip">{{ skill }}</span>
+          <input type="date" #deadlineInput (click)="deadlineInput.showPicker()" [(ngModel)]="job.deadline" class="form-control onboard-input">
         </div>
       </div>
     </div>
 
-    <!-- ═══════════ STEP 5: Success ═══════════ -->
-    <div class="step-content text-center success-state" *ngIf="currentStep() === 5">
+    <!-- ═══════════ STEP 5: Job Preview ═══════════ -->
+    <div class="step-content animate-fade-in" *ngIf="currentStep() === 5">
+      <div class="step-section-header">
+        <h2>Review & Preview</h2>
+        <p>Preview the job details below before publishing.</p>
+      </div>
+
+      <!-- Preview Card -->
+      <div class="job-preview-box glass-card" style="margin-bottom: 2rem; padding: 1.5rem; border: 1px dashed rgba(var(--primary-rgb), 0.3); border-radius: 12px; background: rgba(var(--primary-rgb), 0.03);">
+        <div class="preview-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+          <h3 style="margin: 0; font-size: 0.9rem; font-weight: 700; color: var(--text-secondary);">📋 Job Preview</h3>
+          <p class="preview-badge" style="margin: 0; font-size: 0.78rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 20px; background: rgba(var(--primary-rgb), 0.1); color: var(--primary-color);">
+            {{ job.jobType.replace('_', ' ') }} · {{ job.workMode }}
+          </p>
+        </div>
+        <h2 class="preview-job-title" style="margin: 0 0 0.3rem; font-size: 1.3rem; font-weight: 900; color: var(--text-primary);">{{ job.title || 'Untitled Role' }}</h2>
+        <p class="preview-location" style="margin: 0 0 0.75rem; font-size: 0.85rem; color: var(--text-secondary);">
+          {{ job.location || 'Location not set' }}
+          <span *ngIf="salaryMin || salaryMax"> · ₹{{ salaryMin || 0 }} - ₹{{ salaryMax || 0 }} LPA</span>
+        </p>
+        <div class="preview-skills-row" style="display: flex; flex-wrap: wrap; gap: 0.4rem;" *ngIf="requiredSkillsArray.length > 0">
+          <span *ngFor="let skill of requiredSkillsArray.slice(0, 5)" class="skill-chip" style="font-size: 0.78rem; font-weight: 700; padding: 0.25rem 0.65rem; border-radius: 20px; background: rgba(var(--primary-rgb), 0.1); color: var(--primary-color); border: 1px solid rgba(var(--primary-rgb), 0.2);">{{ skill }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ STEP 6: Success ═══════════ -->
+    <div class="step-content text-center success-state animate-fade-in" *ngIf="currentStep() === 6">
       <div class="success-checkmark">✓</div>
       <h2 class="success-title">Job Posted Successfully!</h2>
       <p class="success-subtitle">Your job listing is now live and candidates will start receiving AI-powered match scores automatically.</p>
@@ -200,10 +218,10 @@
     </div>
 
     <!-- Navigation Footer -->
-    <div class="step-nav-footer" *ngIf="currentStep() <= 4">
+    <div class="step-nav-footer" *ngIf="currentStep() <= 5">
       <button type="button" class="btn btn-secondary btn-nav" (click)="prevStep()" [disabled]="currentStep() === 1">Back</button>
-      <button type="button" class="btn btn-primary btn-nav" (click)="currentStep() < 4 ? nextStep() : submitJob()" [disabled]="isLoading()">
-        <span *ngIf="!isLoading()">{{ currentStep() === 4 ? 'Post Job' : 'Continue' }}</span>
+      <button type="button" class="btn btn-primary btn-nav" (click)="currentStep() < 5 ? nextStep() : submitJob()" [disabled]="isLoading()">
+        <span *ngIf="!isLoading()">{{ currentStep() === 5 ? 'Post Job' : 'Continue' }}</span>
         <span *ngIf="isLoading()" class="dot-typing"><span></span><span></span><span></span></span>
       </button>
     </div>
