@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +37,8 @@ public class ResumeService {
     private final RabbitTemplate rabbitTemplate;
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
+    @Qualifier("resumeProcessingExecutor")
+    private final Executor resumeExecutor;
 
     /**
      * Background processing pipeline for an uploaded resume.
@@ -51,80 +55,92 @@ public class ResumeService {
      */
     public void processResume(UUID resumeId) {
         long startProcess = System.currentTimeMillis();
-        log.info("Starting background AI processing for resume ID: {}", resumeId);
+        log.info("[PIPELINE] Starting AI processing for resume ID: {}", resumeId);
+
         Resume resume = resumeRepository.findById(resumeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Resume not found: " + resumeId));
 
-        final String parsedText = resume.getParsedText() != null && !resume.getParsedText().isBlank() 
-                ? resume.getParsedText() 
-                : "Resume candidate skills Java Spring Boot Angular Database SQL";
+        final String parsedText = resume.getParsedText();
+        if (parsedText == null || parsedText.isBlank()) {
+            log.error("[PIPELINE] Resume {} has no parsedText — PDF extraction must have failed. Marking FAILED.", resumeId);
+            resume.setProcessingStatus("FAILED");
+            resumeRepository.save(resume);
+            return;
+        }
+        log.info("[PIPELINE] Resume {} parsedText length: {} chars", resumeId, parsedText.length());
 
         try {
-            // ── Parallel Execution of Embedding & Groq Profile Extraction ─────────
-            log.info("Triggering parallel Embedding Generation and Groq LLM Profile Extraction for resume {}...", resumeId);
-            
+            // ── Parallel: Embedding generation + Groq profile extraction ────────────
+            // Both tasks run on the dedicated resumeProcessingExecutor pool (not common ForkJoin pool).
+            log.info("[PIPELINE] Launching parallel embedding + Groq extraction...");
+
             CompletableFuture<float[]> embeddingFuture = CompletableFuture.supplyAsync(() -> {
-                long startEmbed = System.currentTimeMillis();
+                long t = System.currentTimeMillis();
                 try {
                     float[] vec = embeddingService.generateEmbedding(parsedText);
-                    long duration = System.currentTimeMillis() - startEmbed;
-                    log.info("[TIMING] Async Embedding generation took {} ms", duration);
+                    log.info("[TIMING][EMBED] Embedding generation took {} ms", System.currentTimeMillis() - t);
                     return vec;
                 } catch (Exception e) {
-                    log.warn("Embedding generation failed: {}. Using zero-vector fallback.", e.getMessage());
+                    log.warn("[EMBED] Failed ({} ms): {}. Using zero-vector fallback.",
+                            System.currentTimeMillis() - t, e.getMessage());
                     float[] fallback = new float[384];
                     for (int i = 0; i < 384; i++) fallback[i] = 0.01f;
                     return fallback;
                 }
-            });
+            }, resumeExecutor);
 
             CompletableFuture<String> groqFuture = CompletableFuture.supplyAsync(() -> {
-                long startGroq = System.currentTimeMillis();
+                long t = System.currentTimeMillis();
                 try {
                     String profileJson = groqService.extractResumeProfile(parsedText);
-                    long duration = System.currentTimeMillis() - startGroq;
-                    log.info("[TIMING] Async Groq Profile extraction took {} ms", duration);
+                    log.info("[TIMING][GROQ] Profile extraction took {} ms", System.currentTimeMillis() - t);
                     return profileJson;
                 } catch (Exception e) {
-                    log.warn("Groq extraction failed: {}. Using mock profile.", e.getMessage());
-                    return groqService.getMockProfileJson();
+                    log.warn("[GROQ] Extraction failed ({} ms): {}. Will mark FAILED.",
+                            System.currentTimeMillis() - t, e.getMessage());
+                    return null; // null signals failure — handled below
                 }
-            });
+            }, resumeExecutor);
 
-            // Wait for both tasks to finish in parallel
+            // Wait for both to complete in parallel
             CompletableFuture.allOf(embeddingFuture, groqFuture).join();
+            log.info("[TIMING][PIPELINE] Parallel wall-clock (embed + Groq combined): {} ms",
+                    System.currentTimeMillis() - startProcess);
 
             float[] vector = embeddingFuture.get();
             String jsonProfile = groqFuture.get();
+
+            if (jsonProfile == null || jsonProfile.isBlank() || "{}".equals(jsonProfile.trim())) {
+                log.error("[PIPELINE] Groq returned null/empty JSON for resume {}. Marking FAILED.", resumeId);
+                resume.setProcessingStatus("FAILED");
+                resumeRepository.save(resume);
+                return;
+            }
 
             resume.setEmbedding(vector);
             resume.setExtractedJson(jsonProfile);
             resume.setProcessingStatus("SUCCESS");
 
-            // ── Step 3: Save + deactivate old resumes ───────────────────────────
+            // ── Save + deactivate old resumes ──────────────────────────────────────
             long startSave = System.currentTimeMillis();
             saveResumeAndDeactivateOthers(resume);
-            long saveDuration = System.currentTimeMillis() - startSave;
-            log.info("[TIMING] Supabase/DB save and deactivation took {} ms", saveDuration);
+            log.info("[TIMING][DB] Save+deactivate took {} ms", System.currentTimeMillis() - startSave);
 
-            log.info("[TIMING] Total background processResume pipeline completed in {} ms.", 
-                    System.currentTimeMillis() - startProcess);
+            log.info("[TIMING][PIPELINE] Total processResume pipeline for {} completed in {} ms.",
+                    resumeId, System.currentTimeMillis() - startProcess);
 
-            // ── Step 4: Trigger async job matching pipeline ──────────────────────
+            // ── Trigger async job matching pipeline ────────────────────────────────
             fireJobMatchingEvent(resume.getStudent().getId(), resumeId);
 
         } catch (Exception e) {
-            log.error("Critical failure processing resume {}: {}", resumeId, e.getMessage(), e);
-            // Best-effort fallback: still mark SUCCESS so the UI can proceed
+            log.error("[PIPELINE] Critical failure processing resume {} after {} ms: {}",
+                    resumeId, System.currentTimeMillis() - startProcess, e.getMessage(), e);
+            // Mark as FAILED — the frontend will show a proper error to the user.
             try {
-                resume.setProcessingStatus("SUCCESS");
-                if (resume.getExtractedJson() == null) {
-                    resume.setExtractedJson(groqService.getMockProfileJson());
-                }
+                resume.setProcessingStatus("FAILED");
                 resumeRepository.save(resume);
-                fireJobMatchingEvent(resume.getStudent().getId(), resumeId);
             } catch (Exception ex) {
-                log.error("Failed to save fallback state for resume {}: {}", resumeId, ex.getMessage(), ex);
+                log.error("[PIPELINE] Failed to persist FAILED status for resume {}: {}", resumeId, ex.getMessage());
             }
         }
     }

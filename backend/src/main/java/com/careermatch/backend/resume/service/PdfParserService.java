@@ -1,10 +1,10 @@
 package com.careermatch.backend.resume.service;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.tika.Tika;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.apache.tika.Tika;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
@@ -12,93 +12,128 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Optimized PDF/DOCX text extraction service.
+ *
+ * Strategy (fastest-first cascade):
+ *  1. PDFBox — reads from in-memory byte array (no temp file I/O for the parse step).
+ *     Sorts by text position for logical reading order. Fastest for standard PDFs.
+ *  2. Apache Tika — pure-Java fallback. Slightly slower but handles more formats.
+ *  3. PyMuPDF Python subprocess — last resort for encrypted/complex PDFs (30s timeout).
+ *
+ * Text cleaning removes control chars and collapses whitespace before returning.
+ */
 @Service
 @Slf4j
 public class PdfParserService {
 
+    /** Re-use a single Tika instance (heavy init cost); it is thread-safe. */
     private final Tika tika = new Tika();
 
     public String parsePdf(InputStream inputStream) throws IOException {
-        long startTime = System.currentTimeMillis();
-        // Copy stream to a temp file
-        Path tempFile = Files.createTempFile("resume-", ".tmp");
-        try (OutputStream out = Files.newOutputStream(tempFile)) {
-            inputStream.transferTo(out);
-        }
+        long startTotal = System.currentTimeMillis();
+
+        // Read the full stream into memory once — avoids repeated disk I/O across fallbacks.
+        byte[] pdfBytes = inputStream.readAllBytes();
+        log.info("[PDF] Read {} bytes from stream in {} ms",
+                pdfBytes.length, System.currentTimeMillis() - startTotal);
 
         String extractedText = null;
 
-        // 1. Try Apache PDFBox directly (highly reliable in standard JRE environments)
+        // ── Strategy 1: Apache PDFBox (in-memory byte array, no temp file) ─────────
+        long t1 = System.currentTimeMillis();
         try {
-            log.info("Attempting PDF text extraction via Apache PDFBox directly...");
-            try (PDDocument document = Loader.loadPDF(tempFile.toFile())) {
-                PDFTextStripper pdfStripper = new PDFTextStripper();
-                String text = pdfStripper.getText(document);
+            log.info("[PDF] Attempting PDFBox extraction from in-memory bytes...");
+            try (PDDocument document = Loader.loadPDF(pdfBytes)) {
+                PDFTextStripper stripper = new PDFTextStripper();
+                // sortByPosition gives logical reading order, which improves LLM accuracy.
+                stripper.setSortByPosition(true);
+                String text = stripper.getText(document);
                 if (text != null && !text.isBlank()) {
-                    log.info("Apache PDFBox PDF extraction succeeded.");
+                    log.info("[TIMING][PDF] PDFBox extraction took {} ms ({} chars)",
+                            System.currentTimeMillis() - t1, text.length());
                     extractedText = text;
+                } else {
+                    log.warn("[PDF] PDFBox returned empty text — trying Tika.");
                 }
             }
         } catch (Exception e) {
-            log.warn("Apache PDFBox extraction failed: {}. Falling back to Apache Tika.", e.getMessage());
+            log.warn("[PDF] PDFBox failed ({} ms): {} — falling back to Tika.",
+                    System.currentTimeMillis() - t1, e.getMessage());
         }
 
-        // 2. Try Apache Tika (pure Java, in-process, no OS dependencies)
+        // ── Strategy 2: Apache Tika (still in-memory via ByteArrayInputStream) ────
         if (extractedText == null) {
+            long t2 = System.currentTimeMillis();
             try {
-                log.info("Attempting PDF text extraction via Apache Tika...");
-                String text = tika.parseToString(Files.newInputStream(tempFile));
+                log.info("[PDF] Attempting Apache Tika extraction...");
+                String text = tika.parseToString(new ByteArrayInputStream(pdfBytes));
                 if (text != null && !text.isBlank()) {
-                    log.info("Apache Tika PDF extraction succeeded.");
+                    log.info("[TIMING][PDF] Tika extraction took {} ms ({} chars)",
+                            System.currentTimeMillis() - t2, text.length());
                     extractedText = text;
+                } else {
+                    log.warn("[PDF] Tika returned empty text — falling back to PyMuPDF.");
                 }
             } catch (Exception e) {
-                log.warn("Apache Tika extraction failed: {}. Falling back to PyMuPDF.", e.getMessage());
+                log.warn("[PDF] Tika failed ({} ms): {} — falling back to PyMuPDF.",
+                        System.currentTimeMillis() - t2, e.getMessage());
             }
         }
 
-        // 3. Fallback to PyMuPDF (fitz Python script)
+        // ── Strategy 3: PyMuPDF Python subprocess (last resort, writes a temp file) ─
         if (extractedText == null) {
+            long t3 = System.currentTimeMillis();
+            Path tempFile = Files.createTempFile("resume-pymupdf-", ".pdf");
             try {
-                log.info("Attempting PDF text extraction via PyMuPDF (fitz) script fallback...");
+                Files.write(tempFile, pdfBytes);
+                log.info("[PDF] Attempting PyMuPDF (Python) extraction...");
                 String text = runPythonParser(tempFile.toAbsolutePath().toString());
                 if (text != null && !text.isBlank()) {
-                    log.info("PyMuPDF PDF extraction succeeded.");
+                    log.info("[TIMING][PDF] PyMuPDF extraction took {} ms ({} chars)",
+                            System.currentTimeMillis() - t3, text.length());
                     extractedText = text;
                 }
             } catch (Exception e) {
-                log.error("PyMuPDF fallback extraction failed: {}", e.getMessage());
+                log.error("[PDF] PyMuPDF fallback failed ({} ms): {}",
+                        System.currentTimeMillis() - t3, e.getMessage());
             } finally {
                 Files.deleteIfExists(tempFile);
             }
-        } else {
-            Files.deleteIfExists(tempFile);
         }
 
-        if (extractedText == null) {
-            throw new RuntimeException("All PDF parsers failed to extract text from resume");
+        if (extractedText == null || extractedText.isBlank()) {
+            throw new RuntimeException(
+                    "All PDF parsers (PDFBox, Tika, PyMuPDF) failed to extract text from the resume. " +
+                    "The file may be a scanned image-only PDF with no embedded text.");
         }
 
-        long parseDuration = System.currentTimeMillis() - startTime;
-        log.info("[TIMING] Raw PDF extraction took {} ms", parseDuration);
-
+        // ── Text cleaning ─────────────────────────────────────────────────────────
         long cleanStart = System.currentTimeMillis();
         String cleaned = cleanText(extractedText);
-        long cleanDuration = System.currentTimeMillis() - cleanStart;
-        log.info("[TIMING] Text cleaning took {} ms. Length reduced from {} to {} chars.", 
-                cleanDuration, extractedText.length(), cleaned.length());
+        log.info("[TIMING][PDF] Text cleaning took {} ms. Chars: {} → {}",
+                System.currentTimeMillis() - cleanStart, extractedText.length(), cleaned.length());
+
+        log.info("[TIMING][PDF] Total parsePdf pipeline took {} ms",
+                System.currentTimeMillis() - startTotal);
 
         return cleaned;
     }
 
+    /**
+     * Removes non-printable control characters, collapses excessive whitespace,
+     * and trims leading/trailing space. Keeps newlines for structural context.
+     */
     public String cleanText(String text) {
         if (text == null) return "";
-        // Remove non-printable control characters (except newline, tab)
+        // Remove non-printable control chars (except tab \t and newline \n)
         String cleaned = text.replaceAll("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]", "");
-        // Collapse multiple spaces to a single space
-        cleaned = cleaned.replaceAll("[ ]+", " ");
-        // Collapse multiple consecutive newlines to a single newline
-        cleaned = cleaned.replaceAll("\\n+", "\n");
+        // Collapse multiple spaces (not newlines) to single space
+        cleaned = cleaned.replaceAll("[ \t]+", " ");
+        // Collapse 3+ consecutive newlines to 2 (preserve paragraph breaks)
+        cleaned = cleaned.replaceAll("\\n{3,}", "\n\n");
+        // Trim lines of only whitespace
+        cleaned = cleaned.replaceAll("(?m)^[ \t]+$", "");
         return cleaned.trim();
     }
 
@@ -114,57 +149,48 @@ public class PdfParserService {
 
         try {
             ProcessBuilder pb = new ProcessBuilder("python", tempScript.toAbsolutePath().toString(), absolutePath);
+            pb.redirectErrorStream(false);
             Process process = pb.start();
 
+            // Read stdout and stderr concurrently to prevent pipe buffer blocking
             StringBuilder output = new StringBuilder();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    output.append(line).append("\n");
-                }
-            }
+            StringBuilder errors = new StringBuilder();
 
-            // Apply a 30-second execution timeout to prevent worker thread starvation
+            Thread stdoutReader = new Thread(() -> {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        output.append(line).append("\n");
+                    }
+                } catch (IOException ignored) {}
+            });
+            Thread stderrReader = new Thread(() -> {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        errors.append(line).append("\n");
+                    }
+                } catch (IOException ignored) {}
+            });
+            stdoutReader.start();
+            stderrReader.start();
+
             boolean finished = process.waitFor(30, TimeUnit.SECONDS);
+            stdoutReader.join(2000);
+            stderrReader.join(2000);
+
             if (!finished) {
                 process.destroyForcibly();
-                log.error("PyMuPDF Python parsing process timed out after 30 seconds for file: {}", absolutePath);
-                throw new RuntimeException("Python PDF parser script timed out after 30 seconds");
+                throw new RuntimeException("PyMuPDF Python parser timed out after 30 seconds");
             }
 
             int exitCode = process.exitValue();
             if (exitCode != 0) {
-                StringBuilder error = new StringBuilder();
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        error.append(line).append("\n");
-                    }
-                }
-                throw new RuntimeException("Python script exited with code " + exitCode + ". Error: " + error);
+                throw new RuntimeException("Python script exited with code " + exitCode + ". Stderr: " + errors);
             }
             return output.toString();
         } finally {
-            try {
-                Files.deleteIfExists(tempScript);
-            } catch (Exception ex) {
-                log.warn("Failed to delete temp script file: {}", ex.getMessage());
-            }
-        }
-    }
-
-    private String parseWithTika(Path filePath) {
-        try (InputStream is = Files.newInputStream(filePath)) {
-            return tika.parseToString(is);
-        } catch (Exception e) {
-            log.error("Apache Tika fallback parsing failed: {}", e.getMessage());
-            throw new RuntimeException("All PDF parsers failed to extract text: " + e.getMessage(), e);
-        } finally {
-            try {
-                Files.deleteIfExists(filePath);
-            } catch (Exception ex) {
-                log.warn("Failed to delete temp file: {}", ex.getMessage());
-            }
+            Files.deleteIfExists(tempScript);
         }
     }
 }

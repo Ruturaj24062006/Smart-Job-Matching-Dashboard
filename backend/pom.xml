@@ -121,6 +121,13 @@
 			<version>${tika.version}</version>
 		</dependency>
 
+		<!-- Apache HttpComponents 5 — enables connection-pooled RestTemplate for Groq API calls -->
+		<dependency>
+			<groupId>org.apache.httpcomponents.client5</groupId>
+			<artifactId>httpclient5</artifactId>
+			<!-- version managed by Spring Boot BOM -->
+		</dependency>
+
 		<!-- LangChain4j for In-Process Embedding Generation (quantized model for low-RAM environments) -->
 		<dependency>
 			<groupId>dev.langchain4j</groupId>

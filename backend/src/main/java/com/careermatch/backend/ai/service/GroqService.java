@@ -29,8 +29,9 @@ public class GroqService {
     @Value("${groq.model}")
     private String modelName;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final ObjectMapper objectMapper;
+    /** Injected shared RestTemplate with HTTP connection pool — do NOT create a new instance per call. */
+    private final RestTemplate restTemplate;
 
     @jakarta.annotation.PostConstruct
     public void init() {
@@ -43,6 +44,18 @@ public class GroqService {
         if ("mock-groq-key".equals(apiKey) || apiKey.isBlank()) {
             log.warn("Using mock resume profile extraction because Groq API Key is not set");
             return getMockProfileJson();
+        }
+
+        // Trim resume text to ~8000 chars (~2000 tokens) to reduce Groq latency.
+        // Full-text semantic matching already uses the embedding; the LLM only needs
+        // key sections (skills, education, experience) for structured JSON extraction.
+        final int MAX_CHARS = 8000;
+        String trimmedText = resumeText.length() > MAX_CHARS
+                ? resumeText.substring(0, MAX_CHARS)
+                : resumeText;
+        if (resumeText.length() > MAX_CHARS) {
+            log.info("[GROQ] Resume text trimmed from {} to {} chars before sending to Groq.",
+                    resumeText.length(), MAX_CHARS);
         }
 
         String systemPrompt = """
@@ -75,7 +88,7 @@ public class GroqService {
                 Make sure any missing date fields are omitted or set to null.
                 """;
 
-        return callGroq(systemPrompt, resumeText, true);
+        return callGroq(systemPrompt, trimmedText, true);
     }
 
     public String explainMatch(String resumeText, String jobDescription) {
@@ -114,6 +127,7 @@ public class GroqService {
     }
 
     private String callGroq(String systemPrompt, String userPrompt, boolean requireJson) {
+        long t0 = System.currentTimeMillis();
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -138,13 +152,14 @@ public class GroqService {
                 if (choices != null && !choices.isEmpty()) {
                     Map message = (Map) choices.get(0).get("message");
                     if (message != null) {
+                        log.info("[TIMING][GROQ] callGroq completed in {} ms", System.currentTimeMillis() - t0);
                         return (String) message.get("content");
                     }
                 }
             }
             throw new RuntimeException("Empty response from Groq API");
         } catch (Exception e) {
-            log.error("Failed to fetch response from Groq: {}", e.getMessage());
+            log.error("[TIMING][GROQ] callGroq failed after {} ms: {}", System.currentTimeMillis() - t0, e.getMessage());
             return requireJson ? "{}" : "Failed to obtain AI explanation.";
         }
     }
