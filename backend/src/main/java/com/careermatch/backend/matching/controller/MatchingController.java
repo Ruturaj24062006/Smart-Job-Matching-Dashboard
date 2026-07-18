@@ -61,6 +61,12 @@ public class MatchingController {
                         .eligibilityStatus(m.isEligibilityStatus())
                         .salaryRange(m.getJob().getSalaryRange())
                         .jobType(m.getJob().getJobType() != null ? m.getJob().getJobType().name() : null)
+                        .workMode(m.getJob().getWorkMode())
+                        .experienceLevel(m.getJob().getExperienceLevel())
+                        .requiredSkills(m.getJob().getRequiredSkills())
+                        .preferredSkills(m.getJob().getPreferredSkills())
+                        .createdAt(m.getJob().getCreatedAt())
+                        .deadline(m.getJob().getDeadline())
                         .build())
                 .collect(Collectors.toList());
 
@@ -137,6 +143,12 @@ public class MatchingController {
                         .eligibilityStatus(m.isEligibilityStatus())
                         .salaryRange(m.getJob().getSalaryRange())
                         .jobType(m.getJob().getJobType() != null ? m.getJob().getJobType().name() : null)
+                        .workMode(m.getJob().getWorkMode())
+                        .experienceLevel(m.getJob().getExperienceLevel())
+                        .requiredSkills(m.getJob().getRequiredSkills())
+                        .preferredSkills(m.getJob().getPreferredSkills())
+                        .createdAt(m.getJob().getCreatedAt())
+                        .deadline(m.getJob().getDeadline())
                         .build())
                 .collect(Collectors.toList());
 

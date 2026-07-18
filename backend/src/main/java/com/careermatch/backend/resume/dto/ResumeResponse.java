@@ -13,5 +13,6 @@ public class ResumeResponse {
     private boolean isCurrent;
     private String parsedText;
     private String extractedJson;
+    private String processingStatus;
     private LocalDateTime createdAt;
 }

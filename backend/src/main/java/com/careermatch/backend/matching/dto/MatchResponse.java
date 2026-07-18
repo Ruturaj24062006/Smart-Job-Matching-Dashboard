@@ -16,4 +16,10 @@ public class MatchResponse {
     private boolean eligibilityStatus;
     private String salaryRange;
     private String jobType;
+    private String workMode;
+    private String experienceLevel;
+    private String requiredSkills;
+    private String preferredSkills;
+    private java.time.LocalDateTime createdAt;
+    private java.time.LocalDateTime deadline;
 }

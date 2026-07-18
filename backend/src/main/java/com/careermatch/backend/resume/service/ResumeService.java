@@ -33,7 +33,6 @@ public class ResumeService {
     private final GroqService groqService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Transactional
     public void processResume(UUID resumeId) {
         log.info("Starting background processing for resume ID: {}", resumeId);
         Resume resume = resumeRepository.findById(resumeId)
@@ -62,22 +61,34 @@ public class ResumeService {
             String jsonProfile = groqService.extractResumeProfile(parsedText);
             resume.setExtractedJson(jsonProfile);
 
-            // 5. Mark other student resumes as inactive
-            Student student = resume.getStudent();
-            resumeRepository.findByStudentId(student.getId()).forEach(r -> {
-                if (!r.getId().equals(resumeId)) {
-                    r.setCurrent(false);
-                }
-            });
-            resume.setCurrent(true);
+            resume.setProcessingStatus("SUCCESS");
 
-            resumeRepository.save(resume);
+            // 5. Mark other student resumes as inactive in transaction
+            saveResumeAndDeactivateOthers(resume);
             log.info("Successfully completed background processing for resume ID: {}", resumeId);
 
         } catch (Exception e) {
             log.error("Failed to process resume ID: {}. Error: {}", resumeId, e.getMessage(), e);
+            try {
+                resume.setProcessingStatus("FAILED");
+                resumeRepository.save(resume);
+            } catch (Exception ex) {
+                log.error("Failed to save FAILED status for resume ID: {}", resumeId, ex);
+            }
             throw new RuntimeException("Resume processing error: " + e.getMessage(), e);
         }
+    }
+
+    @Transactional
+    public void saveResumeAndDeactivateOthers(Resume resume) {
+        Student student = resume.getStudent();
+        resumeRepository.findByStudentId(student.getId()).forEach(r -> {
+            if (!r.getId().equals(resume.getId())) {
+                r.setCurrent(false);
+            }
+        });
+        resume.setCurrent(true);
+        resumeRepository.save(resume);
     }
 
     @Transactional

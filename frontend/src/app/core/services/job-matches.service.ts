@@ -12,6 +12,12 @@ export interface MatchResponse {
   eligibilityStatus: boolean;
   salaryRange?: string;
   jobType?: string;
+  workMode?: string;
+  experienceLevel?: string;
+  requiredSkills?: string;
+  preferredSkills?: string;
+  deadline?: string;
+  createdAt?: string;
 }
 
 export interface MatchDetailsResponse {

@@ -66,6 +66,8 @@ public class Job {
     @Column(name = "sponsorship_available")
     private Boolean sponsorshipAvailable;
 
+    private LocalDateTime deadline;
+
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

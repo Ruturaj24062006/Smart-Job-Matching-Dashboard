@@ -36,6 +36,9 @@ public class Resume {
     @Column(name = "extracted_json", columnDefinition = "jsonb")
     private String extractedJson;
 
+    @Column(name = "processing_status")
+    private String processingStatus;
+
     // Vector embedding for dense search (384 dimensions)
     @Column(name = "embedding", columnDefinition = "vector(384)")
     private float[] embedding;

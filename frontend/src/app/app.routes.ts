@@ -8,6 +8,8 @@ import { ResetPassword } from './features/auth/reset-password/reset-password';
 import { Unauthorized } from './features/auth/unauthorized/unauthorized';
 import { StudentDashboard } from './features/student/dashboard/student-dashboard';
 import { Onboarding } from './features/student/onboarding/onboarding';
+import { ResumeUpload } from './features/student/resume-upload/resume-upload';
+import { ProfileReview } from './features/student/profile-review/profile-review';
 import { RecruiterDashboard } from './features/recruiter/dashboard/recruiter-dashboard';
 import { RecruiterOnboarding } from './features/recruiter/onboarding/onboarding';
 import { CreateJob } from './features/recruiter/create-job/create-job';
@@ -35,6 +37,18 @@ export const routes: Routes = [
   { 
     path: 'student/onboarding', 
     component: Onboarding, 
+    canActivate: [authGuard, roleGuard], 
+    data: { roles: ['ROLE_STUDENT'] } 
+  },
+  { 
+    path: 'student/resume-upload', 
+    component: ResumeUpload, 
+    canActivate: [authGuard, roleGuard], 
+    data: { roles: ['ROLE_STUDENT'] } 
+  },
+  { 
+    path: 'student/profile-review', 
+    component: ProfileReview, 
     canActivate: [authGuard, roleGuard], 
     data: { roles: ['ROLE_STUDENT'] } 
   },
