@@ -1282,4 +1282,45 @@
   gap: 0.5rem;
 }
 
+/* Candidate Matching Tab Selectors */
+.matching-filter-tabs-row {
+  display: flex;
+  gap: 1rem;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.05);
+  margin-bottom: 2.2rem;
+  padding-bottom: 0.5rem;
+}
+
+.matching-filter-tab {
+  background: transparent;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.matching-filter-tab:hover {
+  color: var(--primary-color);
+}
+
+.matching-filter-tab.active {
+  color: var(--primary-color);
+}
+
+.matching-filter-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -0.62rem;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: var(--primary-color);
+  border-radius: 2px;
+}
+
+
 

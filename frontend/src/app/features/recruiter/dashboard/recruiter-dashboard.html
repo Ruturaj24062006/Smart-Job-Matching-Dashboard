@@ -31,17 +31,13 @@
         <span>Job Management</span>
       </a>
 
-      <!-- Candidate Matching Header -->
-      <div class="nav-section-header" (click)="toggleSubmenu('matching')">
+      <!-- Candidate Matching Direct Link -->
+      <a class="nav-item" [class.active]="activeMenu() === 'matching-recommended' || activeMenu() === 'matching-shortlist'" (click)="selectMenu('matching-recommended')">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+        </svg>
         <span>Candidate Matching</span>
-        <span class="chevron" [class.rotated]="expandedMenus()['matching']">&#9662;</span>
-      </div>
-      <div class="nav-submenu" [class.collapsed]="!expandedMenus()['matching']">
-        <a class="submenu-item" [class.active]="activeMenu() === 'matching-recommended'" (click)="selectMenu('matching-recommended')">Recommended Students</a>
-        <a class="submenu-item" [class.active]="activeMenu() === 'matching-score'" (click)="selectMenu('matching-recommended')">Match Score</a>
-        <a class="submenu-item" [class.active]="activeMenu() === 'matching-explain'" (click)="selectMenu('matching-recommended')">Explain Match</a>
-        <a class="submenu-item" [class.active]="activeMenu() === 'matching-shortlist'" (click)="selectMenu('matching-shortlist')">Shortlist</a>
-      </div>
+      </a>
 
       <!-- Applications Header -->
       <div class="nav-section-header" (click)="toggleSubmenu('applications')">
@@ -501,8 +497,18 @@
     <!-- ═══════════════════════════ 4. CANDIDATE MATCHING PANEL ═══════════════════════════ -->
     <div class="workspace-panel" *ngIf="activeMenu() === 'matching-recommended' || activeMenu() === 'matching-shortlist'">
       <div class="workspace-header">
-        <h1 class="workspace-title">{{ activeMenu() === 'matching-shortlist' ? 'Shortlisted Candidates' : 'AI Student Match Center' }}</h1>
+        <h1 class="workspace-title">Candidate Matching</h1>
         <p class="workspace-subtitle">Discover ranked student matches scored contextually by vector embedding distance</p>
+      </div>
+
+      <!-- Toggle Filter Tab Row -->
+      <div class="matching-filter-tabs-row">
+        <button class="matching-filter-tab" [class.active]="activeMenu() === 'matching-recommended'" (click)="selectMenu('matching-recommended')">
+          All Recommendations
+        </button>
+        <button class="matching-filter-tab" [class.active]="activeMenu() === 'matching-shortlist'" (click)="selectMenu('matching-shortlist')">
+          Shortlisted Candidates
+        </button>
       </div>
 
       <!-- Select Job Filter -->
