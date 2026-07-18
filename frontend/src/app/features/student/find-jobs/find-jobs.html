@@ -539,22 +539,59 @@
       </div>
     </div>
 
-    <!-- STEP 2: Uploading -->
+    <!-- STEP 2: Uploading & AI Parsing with Real Stages -->
     <div *ngIf="uploadStep() === 'uploading'" class="modal-body-step text-center">
       <div class="spinner-loader red-spinner"></div>
-      <h2 class="popup-title">NEXUS AI is Parsing Your Resume...</h2>
-      <p class="popup-subtitle">Extracting skills, projects, work history, and generating candidate vector embedding...</p>
-      
+      <h2 class="popup-title">NEXUS AI is Processing Your Resume</h2>
+      <p class="popup-stage-label">{{ processingStage() }}</p>
+
       <div class="modal-progress-bar">
         <div class="progress-fill" [style.width.%]="uploadProgress()"></div>
       </div>
+
+      <div class="progress-meta-row">
+        <span class="progress-pct">{{ uploadProgress() }}%</span>
+        <span class="progress-eta" *ngIf="processingEtaSecs() > 0">~{{ processingEtaSecs() }}s remaining</span>
+        <span class="progress-eta" *ngIf="processingEtaSecs() === 0">Almost done...</span>
+      </div>
+
+      <div class="processing-stages-list">
+        <div class="stage-item" [class.stage-done]="uploadProgress() >= 20" [class.stage-active]="uploadProgress() < 20">
+          <span class="stage-dot"></span>
+          <span>Uploading &amp; PDF text extraction</span>
+        </div>
+        <div class="stage-item" [class.stage-done]="uploadProgress() >= 40" [class.stage-active]="uploadProgress() >= 20 && uploadProgress() < 40">
+          <span class="stage-dot"></span>
+          <span>AI skill &amp; experience parsing</span>
+        </div>
+        <div class="stage-item" [class.stage-done]="uploadProgress() >= 60" [class.stage-active]="uploadProgress() >= 40 && uploadProgress() < 60">
+          <span class="stage-dot"></span>
+          <span>Generating embedding vector</span>
+        </div>
+        <div class="stage-item" [class.stage-done]="uploadProgress() >= 100" [class.stage-active]="uploadProgress() >= 60 && uploadProgress() < 100">
+          <span class="stage-dot"></span>
+          <span>Saving to database</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP: Error -->
+    <div *ngIf="uploadStep() === 'error'" class="modal-body-step text-center">
+      <div class="popup-icon-wrapper" style="font-size:2.5rem;">❌</div>
+      <h2 class="popup-title">Processing Failed</h2>
+      <div class="alert alert-error animate-fade-in" style="margin: 1rem 0; text-align:left;">
+        {{ uploadError() }}
+      </div>
+      <button type="button" class="btn btn-primary" (click)="uploadStep.set('select'); uploadError.set(null)">
+        Try Again
+      </button>
     </div>
 
     <!-- STEP 3: Review Extracted Details & Search Jobs -->
     <div *ngIf="uploadStep() === 'review'" class="modal-body-step">
       <div class="extracted-review-header">
         <span class="badge-success-pill">✓ Profile Extracted by AI</span>
-        <h2 class="popup-title">Review & Search Jobs</h2>
+        <h2 class="popup-title">Review &amp; Search Jobs</h2>
         <p class="popup-subtitle">Verify your extracted details and job preferences before matching.</p>
       </div>
 
@@ -578,6 +615,16 @@
             <option value="REMOTE">Remote</option>
             <option value="ONSITE">On-Site</option>
           </select>
+        </div>
+      </div>
+
+      <!-- Extracted Skills Chips — only shown when real skills are available -->
+      <div class="extracted-skills-preview" *ngIf="extractedData()?.skills?.length > 0">
+        <label class="review-label">Extracted Key Skills:</label>
+        <div class="skills-badges-wrap">
+          <span *ngFor="let s of (extractedData()?.skills || [])" class="extracted-skill-badge">
+            ✓ {{ s.name || s }}
+          </span>
         </div>
       </div>
 

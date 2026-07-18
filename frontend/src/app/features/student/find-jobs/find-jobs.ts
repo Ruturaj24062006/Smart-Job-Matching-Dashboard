@@ -58,16 +58,19 @@ export class FindJobs implements OnInit, OnDestroy {
 
   // Upload & Review Popup modal (for sidebar action)
   isUploadModalOpen = signal<boolean>(false);
-  uploadStep = signal<'select' | 'uploading' | 'review'>('select');
+  uploadStep = signal<'select' | 'uploading' | 'review' | 'error'>('select');
   uploadProgress = signal<number>(0);
   uploadError = signal<string | null>(null);
   extractedData = signal<any>(null);
   currentResumeId = signal<string | null>(null);
+  processingStage = signal<string>('Uploading resume...');
+  processingEtaSecs = signal<number>(60);
   reviewRole: string = '';
   reviewCity: string = '';
   reviewExperience: string = '';
   reviewWorkMode: string = 'HYBRID';
   private modalPollIntervalId: any = null;
+  private etaIntervalId: any = null;
 
   // Reactively computed list of filtered and sorted matches
   processedMatches = computed(() => {
@@ -422,10 +425,14 @@ export class FindJobs implements OnInit, OnDestroy {
     this.uploadProgress.set(0);
     this.uploadError.set(null);
     this.extractedData.set(null);
+    this.processingStage.set('Uploading resume...');
+    this.processingEtaSecs.set(60);
     this.isUploadModalOpen.set(true);
   }
 
   closeUploadModal(): void {
+    this.stopModalPolling();
+    this.stopEtaCountdown();
     this.isUploadModalOpen.set(false);
   }
 
@@ -445,29 +452,24 @@ export class FindJobs implements OnInit, OnDestroy {
   private startModalUpload(file: File): void {
     this.uploadError.set(null);
     this.uploadStep.set('uploading');
-    this.uploadProgress.set(10);
-
-    const progressTimer = setInterval(() => {
-      if (this.uploadProgress() < 85) {
-        this.uploadProgress.update(p => Math.min(p + 5, 85));
-      } else {
-        clearInterval(progressTimer);
-      }
-    }, 500);
+    this.uploadProgress.set(5);
+    this.processingStage.set('Uploading resume file...');
+    this.processingEtaSecs.set(75);
 
     this.profileService.uploadResume(file).subscribe({
       next: (res) => {
-        clearInterval(progressTimer);
-        this.uploadProgress.set(90);
+        this.uploadProgress.set(20);
+        this.processingStage.set('Extracting text from PDF...');
+        this.processingEtaSecs.set(65);
         if (res.data && res.data.id) {
           this.currentResumeId.set(res.data.id);
         }
         this.startModalPolling();
+        this.startEtaCountdown();
       },
       error: (err) => {
-        clearInterval(progressTimer);
-        this.uploadStep.set('select');
-        this.uploadError.set(err.error?.message || 'Failed to upload resume. Please try again.');
+        this.uploadStep.set('error');
+        this.uploadError.set(err.error?.message || 'Failed to upload resume. Please check the file and try again.');
       }
     });
   }
@@ -479,34 +481,81 @@ export class FindJobs implements OnInit, OnDestroy {
 
     this.modalPollIntervalId = setInterval(() => {
       attempts++;
+
+      if (attempts === 3) {
+        this.processingStage.set('AI parsing skills & experience...');
+        this.uploadProgress.set(40);
+      } else if (attempts === 8) {
+        this.processingStage.set('Generating candidate embedding vector...');
+        this.uploadProgress.set(60);
+      } else if (attempts === 15) {
+        this.processingStage.set('Saving profile to database...');
+        this.uploadProgress.set(80);
+      }
+
       if (attempts > maxAttempts) {
         this.stopModalPolling();
-        this.uploadProgress.set(100);
-        this.extractedData.set({});
-        this.uploadStep.set('review');
+        this.stopEtaCountdown();
+        this.uploadStep.set('error');
+        this.uploadError.set(
+          'AI processing timed out after 3 minutes. The resume may be too complex or the server is busy. Please try uploading a simpler PDF or try again later.'
+        );
         return;
       }
 
       this.profileService.getLatestResume().subscribe({
         next: (res) => {
-          if (res.success && res.data && res.data.extractedJson) {
-            this.stopModalPolling();
-            const rawJson = res.data.extractedJson;
-            let parsed: any = null;
-            try {
-              parsed = typeof rawJson === 'string' ? JSON.parse(rawJson) : rawJson;
-            } catch (e) {}
-            this.extractedData.set(parsed || {});
-            this.reviewRole = parsed?.preferredRole || parsed?.name || 'Software Engineer';
-            this.reviewCity = parsed?.location || 'Bengaluru';
-            this.reviewExperience = parsed?.experienceLevel || 'Entry-Mid';
-            this.reviewWorkMode = parsed?.workMode || 'HYBRID';
-            this.uploadProgress.set(100);
-            this.uploadStep.set('review');
+          if (res.success && res.data) {
+            if (res.data.processingStatus === 'FAILED') {
+              this.stopModalPolling();
+              this.stopEtaCountdown();
+              this.uploadStep.set('error');
+              this.uploadError.set(
+                'AI could not parse your resume. This may be due to a scanned image-only PDF or unsupported formatting. Please try a text-based PDF.'
+              );
+              return;
+            }
+            if (res.data.extractedJson) {
+              this.stopModalPolling();
+              this.stopEtaCountdown();
+              const rawJson = res.data.extractedJson;
+              let parsed: any = null;
+              try {
+                parsed = typeof rawJson === 'string' ? JSON.parse(rawJson) : rawJson;
+              } catch (e) {
+                this.uploadStep.set('error');
+                this.uploadError.set('Failed to read extracted resume data. Please try again.');
+                return;
+              }
+              this.extractedData.set(parsed);
+              this.reviewRole = parsed?.preferredRole || parsed?.currentTitle || '';
+              this.reviewCity = parsed?.location || '';
+              this.reviewExperience = parsed?.experienceLevel || '';
+              this.reviewWorkMode = parsed?.workMode || 'HYBRID';
+              this.uploadProgress.set(100);
+              this.uploadStep.set('review');
+            }
           }
+        },
+        error: () => {
+          console.warn('Resume status poll failed, retrying...');
         }
       });
     }, 3000);
+  }
+
+  private startEtaCountdown(): void {
+    this.stopEtaCountdown();
+    this.etaIntervalId = setInterval(() => {
+      this.processingEtaSecs.update(s => Math.max(0, s - 1));
+    }, 1000);
+  }
+
+  private stopEtaCountdown(): void {
+    if (this.etaIntervalId) {
+      clearInterval(this.etaIntervalId);
+      this.etaIntervalId = null;
+    }
   }
 
   private stopModalPolling(): void {
@@ -522,15 +571,16 @@ export class FindJobs implements OnInit, OnDestroy {
       this.profileService.confirmResume(resumeId).subscribe({
         next: () => {
           this.closeUploadModal();
-          this.triggerMatchGeneration();
+          this.fetchMatches();
         },
         error: () => {
           this.closeUploadModal();
-          this.triggerMatchGeneration();
+          this.fetchMatches();
         }
       });
     } else {
       this.closeUploadModal();
+      this.fetchMatches();
     }
   }
 }

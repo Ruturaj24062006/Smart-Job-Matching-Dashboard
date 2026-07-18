@@ -78,13 +78,13 @@ export const routes: Routes = [
   },
   {
     path: 'student/find-jobs',
-    component: StudentDashboard,
+    component: FindJobs,
     canActivate: [authGuard, roleGuard],
     data: { roles: ['ROLE_STUDENT'] }
   },
   {
     path: 'student/jobs',
-    component: StudentDashboard,
+    component: FindJobs,
     canActivate: [authGuard, roleGuard],
     data: { roles: ['ROLE_STUDENT'] }
   },
