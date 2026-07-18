@@ -161,8 +161,7 @@ public class JobService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         Recruiter recruiter = recruiterRepository.findById(user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Recruiter not found"));
-        if (recruiter.getCompany() == null) return List.of();
-        return jobRepository.findByCompanyId(recruiter.getCompany().getId());
+        return jobRepository.findByRecruiterId(recruiter.getId());
     }
 
     @Transactional

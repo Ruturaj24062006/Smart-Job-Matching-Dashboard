@@ -1,6 +1,7 @@
 package com.careermatch.backend.matching.service;
 
 import com.careermatch.backend.job.entity.Job;
+import com.careermatch.backend.job.entity.JobStatus;
 import com.careermatch.backend.job.repository.JobRepository;
 import com.careermatch.backend.resume.entity.Resume;
 import com.careermatch.backend.resume.repository.ResumeRepository;
@@ -45,8 +46,8 @@ public class SearchService {
             log.warn("No active resume or embedding found for student: {}. Falling back to FTS-only search.", student.getId());
 
             if (keywords.isBlank()) {
-                log.warn("Student {} has no skills or resume text — returning empty job list.", student.getId());
-                return Collections.emptyList();
+                log.warn("Student {} has no skills or resume text — returning all active jobs.", student.getId());
+                return jobRepository.findByStatus(JobStatus.ACTIVE);
             }
 
             // Dense leg: zero vector (pgvector will still rank by BM25 via RRF)

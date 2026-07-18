@@ -6,8 +6,8 @@ import com.careermatch.backend.exception.ResourceNotFoundException;
 import com.careermatch.backend.job.entity.Job;
 import com.careermatch.backend.job.repository.JobRepository;
 import com.careermatch.backend.matching.service.MatchingService;
-import com.careermatch.backend.resume.entity.Resume;
-import com.careermatch.backend.resume.repository.ResumeRepository;
+import com.careermatch.backend.student.entity.Student;
+import com.careermatch.backend.student.repository.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -23,7 +23,7 @@ import java.util.List;
 public class JobTaskListener {
 
     private final JobRepository jobRepository;
-    private final ResumeRepository resumeRepository;
+    private final StudentRepository studentRepository;
     private final MatchingService matchingService;
 
     @RabbitListener(queues = QueueConfig.JOB_POSTED_QUEUE)
@@ -35,24 +35,19 @@ public class JobTaskListener {
             Job job = jobRepository.findById(event.getJobId())
                     .orElseThrow(() -> new ResourceNotFoundException("Job not found: " + event.getJobId()));
 
-            if (job.getEmbedding() == null) {
-                log.warn("Job posting has no embedding, skipping vector-based matching.");
-                return;
-            }
+            // Retrieve all students to calculate match scores in real-time
+            List<Student> allStudents = studentRepository.findAll();
+            log.info("Found {} total students to calculate matches for Job ID: {}", allStudents.size(), event.getJobId());
 
-            // Retrieve only the Top 100 candidates based on pgvector similarity search
-            List<Resume> topResumes = resumeRepository.searchResumesByEmbedding(job.getEmbedding(), 100);
-            log.info("Found {} candidate resumes matching Job ID: {}", topResumes.size(), event.getJobId());
-
-            for (Resume resume : topResumes) {
+            for (Student student : allStudents) {
                 try {
-                    matchingService.generateMatchesForStudentAndJob(resume.getStudent().getId(), job);
+                    matchingService.generateMatchForStudentAndJob(student, job);
                 } catch (Exception e) {
                     log.error("Failed to generate match for student {} and job {}: {}", 
-                            resume.getStudent().getId(), job.getId(), e.getMessage());
+                            student.getId(), job.getId(), e.getMessage());
                 }
             }
-            log.info("Finished updating matches for top candidates following Job: {}", event.getJobId());
+            log.info("Finished updating matches for all students following Job: {}", event.getJobId());
         } catch (Exception e) {
             log.error("Failed to update matches for job post asynchronously: {}", e.getMessage(), e);
             throw e; // Let exception bubble up to activate RabbitMQ retry policy and DLQ!

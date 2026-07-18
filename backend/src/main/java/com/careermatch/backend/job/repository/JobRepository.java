@@ -14,6 +14,7 @@ import java.util.UUID;
 public interface JobRepository extends JpaRepository<Job, UUID> {
     List<Job> findByCompanyId(UUID companyId);
     List<Job> findByStatus(JobStatus status);
+    List<Job> findByRecruiterId(UUID recruiterId);
 
     @Query(value = """
         WITH vector_search AS (

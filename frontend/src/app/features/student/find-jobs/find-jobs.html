@@ -239,8 +239,8 @@
               </div>
             </div>
 
-            <!-- Right Side: Circular Score & View Details Button -->
-            <div class="card-right-section">
+            <!-- Right Side: Circular Score & Action Buttons -->
+            <div class="card-right-section" style="min-width: 200px;">
               <div class="score-donut-v2-container">
                 <div class="score-donut-v2" [style.background]="'conic-gradient(#f97316 ' + (m.compositeScore * 3.6) + 'deg, rgba(255,255,255,0.06) 0deg)'">
                   <div class="donut-v2-inner">
@@ -250,9 +250,26 @@
                 <span class="score-fit-label-v2">{{ getFitLabel(m.compositeScore) }}</span>
               </div>
 
-              <button type="button" class="btn btn-primary view-details-orange-v2" (click)="viewMatchDetails(m.id)">
-                View Details
-              </button>
+              <div class="card-action-buttons-row" style="display: flex; gap: 0.5rem; margin-top: 0.5rem; width: 100%;">
+                <button type="button" class="btn btn-primary view-details-orange-v2" style="flex: 1; font-size: 0.78rem !important; padding: 0.5rem 0.65rem !important; margin: 0; background: #f97316 !important; border: none !important; border-radius: 6px; font-weight: 700; color: #fff;" (click)="viewMatchDetails(m.id)">
+                  View Details
+                </button>
+                <button type="button" 
+                        *ngIf="!appliedJobIds().has(m.jobId)"
+                        class="btn btn-success apply-now-green-v2" 
+                        style="flex: 1; font-size: 0.78rem !important; padding: 0.5rem 0.65rem !important; margin: 0; background: #22c55e !important; border: none !important; border-radius: 6px; font-weight: 700; color: #fff;"
+                        (click)="initiateApply(m.jobId, m.jobTitle, m.companyName, $event)">
+                  Apply Now
+                </button>
+                <button type="button" 
+                        *ngIf="appliedJobIds().has(m.jobId)"
+                        class="btn btn-success apply-now-green-v2" 
+                        style="flex: 1; font-size: 0.78rem !important; padding: 0.5rem 0.65rem !important; margin: 0; background: #16a34a !important; border: none !important; border-radius: 6px; font-weight: 700; color: #fff; opacity: 0.8;"
+                        disabled
+                        (click)="$event.stopPropagation()">
+                  Applied ✓
+                </button>
+              </div>
             </div>
 
           </div>
@@ -428,15 +445,17 @@
       <!-- Right side: Sliding AI Advisor Chat Panel -->
       <div class="modal-right-chat animate-slide-in" *ngIf="isAiChatOpen()">
         <div class="chat-header-row">
-          <h4 class="chat-title-text">Ask AI about this job</h4>
+          <h4 class="chat-title-text" style="color: #991b1b; font-weight: 800;">Ask NEXUS AI Assistant</h4>
           <button type="button" class="close-chat-btn" (click)="closeAiChat()">&times;</button>
         </div>
 
-        <div class="chat-quick-actions">
-          <button type="button" class="quick-action-pill" (click)="selectQuickQuestion('Why did I get this score?')">Why did I get this score?</button>
-          <button type="button" class="quick-action-pill" (click)="selectQuickQuestion('What skills am I missing?')">What skills am I missing?</button>
-          <button type="button" class="quick-action-pill" (click)="selectQuickQuestion('Should I apply?')">Should I apply?</button>
-          <button type="button" class="quick-action-pill" (click)="selectQuickQuestion('How can I improve my chances?')">How can I improve my chances?</button>
+        <div class="chat-quick-actions" style="display: flex; flex-direction: column; gap: 0.45rem; padding: 0.5rem 0.25rem;">
+          <button type="button" class="quick-action-pill" style="font-size: 0.76rem !important; text-align: left !important; padding: 0.45rem 0.6rem !important; border-radius: 6px !important; border: 1px solid #e2d7c5 !important; background: #fff !important; cursor: pointer; color: #4b5563; font-weight: 600;" (click)="selectQuickQuestion('Am I a good fit for this role?')">Am I a good fit for this role?</button>
+          <button type="button" class="quick-action-pill" style="font-size: 0.76rem !important; text-align: left !important; padding: 0.45rem 0.6rem !important; border-radius: 6px !important; border: 1px solid #e2d7c5 !important; background: #fff !important; cursor: pointer; color: #4b5563; font-weight: 600;" (click)="selectQuickQuestion('Which skills am I missing?')">Which skills am I missing?</button>
+          <button type="button" class="quick-action-pill" style="font-size: 0.76rem !important; text-align: left !important; padding: 0.45rem 0.6rem !important; border-radius: 6px !important; border: 1px solid #e2d7c5 !important; background: #fff !important; cursor: pointer; color: #4b5563; font-weight: 600;" (click)="selectQuickQuestion('How well does my resume match this job?')">How well does my resume match this job?</button>
+          <button type="button" class="quick-action-pill" style="font-size: 0.76rem !important; text-align: left !important; padding: 0.45rem 0.6rem !important; border-radius: 6px !important; border: 1px solid #e2d7c5 !important; background: #fff !important; cursor: pointer; color: #4b5563; font-weight: 600;" (click)="selectQuickQuestion('Explain the job description in simple terms.')">Explain the job description in simple terms.</button>
+          <button type="button" class="quick-action-pill" style="font-size: 0.76rem !important; text-align: left !important; padding: 0.45rem 0.6rem !important; border-radius: 6px !important; border: 1px solid #e2d7c5 !important; background: #fff !important; cursor: pointer; color: #4b5563; font-weight: 600;" (click)="selectQuickQuestion('What should I prepare for the interview?')">What should I prepare for the interview?</button>
+          <button type="button" class="quick-action-pill" style="font-size: 0.76rem !important; text-align: left !important; padding: 0.45rem 0.6rem !important; border-radius: 6px !important; border: 1px solid #e2d7c5 !important; background: #fff !important; cursor: pointer; color: #4b5563; font-weight: 600;" (click)="selectQuickQuestion('What improvements should I make to increase my match score?')">What improvements should I make to increase my match score?</button>
         </div>
 
         <div class="chat-messages-box">

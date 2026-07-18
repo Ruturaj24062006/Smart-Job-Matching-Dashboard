@@ -268,6 +268,7 @@ export class FindJobs implements OnInit, OnDestroy {
       next: (res) => {
         if (res.success && res.data) {
           this.selectedMatch.set(res.data);
+          this.openAiChat();
         }
       },
       error: () => {
