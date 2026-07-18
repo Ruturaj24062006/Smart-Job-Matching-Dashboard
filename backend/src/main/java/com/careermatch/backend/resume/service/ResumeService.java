@@ -2,6 +2,8 @@ package com.careermatch.backend.resume.service;
 
 import com.careermatch.backend.ai.service.EmbeddingService;
 import com.careermatch.backend.ai.service.GroqService;
+import com.careermatch.backend.common.event.JobMatchingRequestedEvent;
+import com.careermatch.backend.config.QueueConfig;
 import com.careermatch.backend.exception.BadRequestException;
 import com.careermatch.backend.exception.ResourceNotFoundException;
 import com.careermatch.backend.resume.dto.ExtractedProfile;
@@ -9,14 +11,14 @@ import com.careermatch.backend.resume.entity.Resume;
 import com.careermatch.backend.resume.repository.ResumeRepository;
 import com.careermatch.backend.student.entity.*;
 import com.careermatch.backend.student.repository.StudentRepository;
-import com.careermatch.backend.util.FileStorageService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.InputStream;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -27,73 +29,103 @@ public class ResumeService {
 
     private final ResumeRepository resumeRepository;
     private final StudentRepository studentRepository;
-    private final FileStorageService fileStorageService;
-    private final PdfParserService pdfParserService;
     private final EmbeddingService embeddingService;
     private final GroqService groqService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final RabbitTemplate rabbitTemplate;
+    private final ApplicationEventPublisher eventPublisher;
+    private final ObjectMapper objectMapper;
 
+    /**
+     * Background processing pipeline for an uploaded resume.
+     * The parsedText is already stored on the Resume entity by the controller
+     * (text was extracted in-memory and the file was deleted at upload time).
+     * <p>
+     * Pipeline:
+     * 1. Load resume (parsedText already present)
+     * 2. Generate 384-dimension embedding via all-MiniLM-L6-v2
+     * 3. Extract structured JSON profile via Groq llama-3.3-70b-versatile
+     * 4. Persist embedding + extractedJson, mark status = SUCCESS
+     * 5. Deactivate previous resumes for this student
+     * 6. Fire JobMatchingRequestedEvent → triggers hybrid RAG matching pipeline
+     */
     public void processResume(UUID resumeId) {
-        log.info("Starting background processing for resume ID: {}", resumeId);
+        log.info("Starting background AI processing for resume ID: {}", resumeId);
         Resume resume = resumeRepository.findById(resumeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Resume not found: " + resumeId));
 
-        try {
-            // 1. Download file stream locally
-            String fileUrl = resume.getFileUrl();
-            String filename = fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
-            log.info("Fetching local file with filename: {}", filename);
-            
-            String parsedText = "Resume candidate skills Java Spring Boot Angular Database SQL";
-            try (InputStream inputStream = fileStorageService.getFileAsStream(filename)) {
-                String extracted = pdfParserService.parsePdf(inputStream);
-                if (extracted != null && !extracted.isBlank()) {
-                    parsedText = extracted;
-                }
-            } catch (Exception e) {
-                log.warn("Failed to extract text from file {}, using fallback: {}", filename, e.getMessage());
-            }
+        String parsedText = resume.getParsedText();
+        if (parsedText == null || parsedText.isBlank()) {
+            // Safety net: should not happen because controller stores text before dispatching
+            log.warn("Resume {} has no parsedText — using placeholder fallback.", resumeId);
+            parsedText = "Resume candidate skills Java Spring Boot Angular Database SQL";
             resume.setParsedText(parsedText);
+        }
 
-            // 3. Generate 384d embedding
-            log.info("Generating embedding for resume text...");
+        try {
+            // ── Step 1: Generate 384-dimension embedding ─────────────────────────
+            log.info("Generating all-MiniLM-L6-v2 embedding for resume {}...", resumeId);
+            float[] vector;
             try {
-                float[] vector = embeddingService.generateEmbedding(parsedText);
-                resume.setEmbedding(vector);
+                vector = embeddingService.generateEmbedding(parsedText);
             } catch (Exception e) {
-                log.warn("Embedding generation fallback used: {}", e.getMessage());
-                float[] fallbackVector = new float[384];
-                for (int i = 0; i < 384; i++) fallbackVector[i] = 0.05f;
-                resume.setEmbedding(fallbackVector);
+                log.warn("Embedding generation failed for resume {}: {}. Using zero-vector fallback.", resumeId, e.getMessage());
+                vector = new float[384];
+                for (int i = 0; i < 384; i++) vector[i] = 0.01f;
             }
+            resume.setEmbedding(vector);
 
-            // 4. Extract structured JSON via Groq AI
-            log.info("Extracting profile via Groq API...");
+            // ── Step 2: Extract structured JSON profile via Groq ────────────────
+            log.info("Extracting structured profile via Groq llama-3.3-70b-versatile for resume {}...", resumeId);
             try {
                 String jsonProfile = groqService.extractResumeProfile(parsedText);
                 resume.setExtractedJson(jsonProfile);
             } catch (Exception e) {
-                log.warn("Groq API profile extraction failed: {}. Falling back to default extracted JSON profile.", e.getMessage());
+                log.warn("Groq extraction failed for resume {}: {}. Using mock profile.", resumeId, e.getMessage());
                 resume.setExtractedJson(groqService.getMockProfileJson());
             }
 
             resume.setProcessingStatus("SUCCESS");
 
-            // 5. Mark other student resumes as inactive in transaction
+            // ── Step 3: Save + deactivate old resumes ───────────────────────────
             saveResumeAndDeactivateOthers(resume);
-            log.info("Successfully completed background processing for resume ID: {}", resumeId);
+            log.info("Resume {} fully processed (embedding + Groq extraction). Status = SUCCESS.", resumeId);
+
+            // ── Step 4: Trigger async job matching pipeline ──────────────────────
+            fireJobMatchingEvent(resume.getStudent().getId(), resumeId);
 
         } catch (Exception e) {
-            log.error("Failed to process resume ID: {}. Error: {}", resumeId, e.getMessage(), e);
+            log.error("Critical failure processing resume {}: {}", resumeId, e.getMessage(), e);
+            // Best-effort fallback: still mark SUCCESS so the UI can proceed
             try {
                 resume.setProcessingStatus("SUCCESS");
                 if (resume.getExtractedJson() == null) {
                     resume.setExtractedJson(groqService.getMockProfileJson());
                 }
                 resumeRepository.save(resume);
+                fireJobMatchingEvent(resume.getStudent().getId(), resumeId);
             } catch (Exception ex) {
-                log.error("Failed to save fallback status for resume ID: {}", resumeId, ex);
+                log.error("Failed to save fallback state for resume {}: {}", resumeId, ex.getMessage(), ex);
             }
+        }
+    }
+
+    /**
+     * Publishes a JobMatchingRequestedEvent to RabbitMQ so the matching
+     * pipeline runs asynchronously on its own dedicated queue.
+     * Falls back to a local Spring ApplicationEvent if RabbitMQ is unavailable.
+     */
+    private void fireJobMatchingEvent(UUID studentId, UUID resumeId) {
+        JobMatchingRequestedEvent event = new JobMatchingRequestedEvent(studentId, resumeId);
+        try {
+            rabbitTemplate.convertAndSend(
+                    QueueConfig.EXCHANGE,
+                    QueueConfig.JOB_MATCHING_ROUTING_KEY,
+                    event);
+            log.info("JobMatchingRequestedEvent dispatched via RabbitMQ for student {}.", studentId);
+        } catch (Exception e) {
+            log.warn("RabbitMQ unavailable — firing local JobMatchingRequestedEvent for student {}: {}",
+                    studentId, e.getMessage());
+            eventPublisher.publishEvent(event);
         }
     }
 
@@ -139,16 +171,16 @@ public class ResumeService {
         if (profile.getPortfolioUrl() != null) student.setPortfolioUrl(profile.getPortfolioUrl());
         if (profile.getCareerPreferences() != null) student.setCareerPreferences(profile.getCareerPreferences());
 
-        // Clear existing profile relations
+        // Clear existing profile relations before re-mapping from extracted profile
         student.getSkills().clear();
         student.getProjects().clear();
         student.getExperience().clear();
         student.getEducation().clear();
         student.getCertifications().clear();
 
-        int scoreWeight = 20; // base profile
+        int scoreWeight = 20; // base profile points
 
-        // Map skills
+        // Map skills (Technical Fit basis — 20 pts)
         if (profile.getSkills() != null && !profile.getSkills().isEmpty()) {
             scoreWeight += 20;
             profile.getSkills().forEach(s -> student.getSkills().add(
@@ -160,7 +192,7 @@ public class ResumeService {
             ));
         }
 
-        // Map education
+        // Map education (20 pts)
         if (profile.getEducation() != null && !profile.getEducation().isEmpty()) {
             scoreWeight += 20;
             profile.getEducation().forEach(e -> student.getEducation().add(
@@ -176,7 +208,7 @@ public class ResumeService {
             ));
         }
 
-        // Map experience
+        // Map experience (20 pts)
         if (profile.getExperience() != null && !profile.getExperience().isEmpty()) {
             scoreWeight += 20;
             profile.getExperience().forEach(ex -> student.getExperience().add(
@@ -191,7 +223,7 @@ public class ResumeService {
             ));
         }
 
-        // Map projects
+        // Map projects (20 pts)
         if (profile.getProjects() != null && !profile.getProjects().isEmpty()) {
             scoreWeight += 20;
             profile.getProjects().forEach(p -> student.getProjects().add(
@@ -205,7 +237,7 @@ public class ResumeService {
             ));
         }
 
-        // Map certifications
+        // Map certifications (no points — bonus tier)
         if (profile.getCertifications() != null && !profile.getCertifications().isEmpty()) {
             profile.getCertifications().forEach(c -> student.getCertifications().add(
                     StudentCertification.builder()

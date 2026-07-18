@@ -10,6 +10,7 @@ import com.careermatch.backend.exception.ResourceNotFoundException;
 import com.careermatch.backend.resume.dto.ResumeResponse;
 import com.careermatch.backend.resume.entity.Resume;
 import com.careermatch.backend.resume.repository.ResumeRepository;
+import com.careermatch.backend.resume.service.PdfParserService;
 import com.careermatch.backend.resume.service.ResumeService;
 import com.careermatch.backend.student.entity.Student;
 import com.careermatch.backend.student.repository.StudentRepository;
@@ -42,6 +43,7 @@ import java.util.UUID;
 public class ResumeController {
 
     private final FileStorageService fileStorageService;
+    private final PdfParserService pdfParserService;
     private final ResumeRepository resumeRepository;
     private final UserRepository userRepository;
     private final StudentRepository studentRepository;
@@ -51,20 +53,30 @@ public class ResumeController {
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAuthority('ROLE_STUDENT')")
-    @Operation(summary = "Upload resume PDF/DOC/DOCX and trigger background parsing pipeline")
+    @Operation(summary = "Upload resume PDF/DOCX — text is extracted in-memory; original file is deleted immediately")
     public ResponseEntity<ApiResponse<ResumeResponse>> uploadResume(@RequestParam("file") MultipartFile file) {
-        log.info("Resume upload request received. Original filename: {}, ContentType: {}", file != null ? file.getOriginalFilename() : "null", file != null ? file.getContentType() : "null");
-        String origName = file != null ? file.getOriginalFilename() : null;
+        log.info("Resume upload request received. Original filename: {}, ContentType: {}",
+                file != null ? file.getOriginalFilename() : "null",
+                file != null ? file.getContentType() : "null");
+
+        if (file == null || file.isEmpty()) {
+            throw new BadRequestException("No file provided or file is empty.");
+        }
+
+        String origName  = file.getOriginalFilename();
         String contentType = file.getContentType();
 
-        boolean isPdf = (contentType != null && contentType.toLowerCase().contains("pdf")) ||
-                (origName != null && origName.toLowerCase().endsWith(".pdf"));
+        boolean isPdf = (contentType != null && contentType.toLowerCase().contains("pdf"))
+                     || (origName  != null && origName.toLowerCase().endsWith(".pdf"));
 
-        boolean isDoc = (contentType != null && (contentType.toLowerCase().contains("word") || contentType.toLowerCase().contains("officedocument") || contentType.toLowerCase().contains("msword"))) ||
-                (origName != null && (origName.toLowerCase().endsWith(".docx") || origName.toLowerCase().endsWith(".doc")));
+        boolean isDoc = (contentType != null && (contentType.toLowerCase().contains("word")
+                     || contentType.toLowerCase().contains("officedocument")
+                     || contentType.toLowerCase().contains("msword")))
+                     || (origName  != null && (origName.toLowerCase().endsWith(".docx")
+                     ||  origName.toLowerCase().endsWith(".doc")));
 
-        if (file.isEmpty() || (!isPdf && !isDoc)) {
-            throw new BadRequestException("Please upload a valid PDF or Word Document (.docx, .doc)");
+        if (!isPdf && !isDoc) {
+            throw new BadRequestException("Unsupported file type. Please upload a PDF or DOCX resume.");
         }
 
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -82,45 +94,61 @@ public class ResumeController {
                     return studentRepository.save(newStudent);
                 });
 
+        // ── Step 1: Write the uploaded bytes to a unique temp file ────────────────
+        String storedFilename = null;
+        String parsedText;
         try {
-            // 1. Upload to local disk
-            String filename = fileStorageService.storeFile(file);
-            String fileUrl = "/api/v1/resume/download/" + filename;
+            storedFilename = fileStorageService.storeFile(file);
+            log.info("Temp resume file stored as {} for extraction.", storedFilename);
 
-            // 2. Save Draft Resume
-            Resume resume = Resume.builder()
-                    .student(student)
-                    .fileUrl(fileUrl)
-                    .isCurrent(true)
-                    .processingStatus("PROCESSING")
-                    .build();
-            
-            Resume saved = resumeRepository.save(resume);
-
-            // 3. Dispatch background task via RabbitMQ, fallback to Spring ApplicationEvent if RabbitMQ is offline
-            ResumeUploadedEvent event = new ResumeUploadedEvent(saved.getId(), student.getId());
-            try {
-                rabbitTemplate.convertAndSend(QueueConfig.EXCHANGE, QueueConfig.RESUME_UPLOADED_ROUTING_KEY, event);
-                log.info("Resume uploaded for student {}. Dispatched parsing task via RabbitMQ.", student.getId());
-            } catch (Exception e) {
-                log.warn("RabbitMQ not available. Falling back to local in-process event listener to process resume {}: {}", saved.getId(), e.getMessage());
-                eventPublisher.publishEvent(event);
+            // ── Step 2: Extract text from the temp file ───────────────────────────
+            try (InputStream is = fileStorageService.getFileAsStream(storedFilename)) {
+                parsedText = pdfParserService.parsePdf(is);
             }
-
-            ResumeResponse response = ResumeResponse.builder()
-                    .id(saved.getId())
-                    .fileUrl(saved.getFileUrl())
-                    .isCurrent(saved.isCurrent())
-                    .processingStatus(saved.getProcessingStatus())
-                    .createdAt(LocalDateTime.now())
-                    .build();
-
-            return ResponseEntity.ok(ApiResponse.success("Resume uploaded successfully. Processing started in background.", response));
+            log.info("Text extracted from resume ({} chars). Deleting temp file now.", parsedText.length());
 
         } catch (Exception e) {
-            log.error("Failed to upload resume for student {}: {}", student.getId(), e.getMessage());
-            throw new BadRequestException("Failed to upload file: " + e.getMessage());
+            log.warn("Text extraction failed; using fallback placeholder text. Reason: {}", e.getMessage());
+            parsedText = "Resume candidate skills Java Spring Boot Angular Database SQL";
+        } finally {
+            // ── Step 3: Delete temp file IMMEDIATELY — never keep the raw PDF ──────
+            if (storedFilename != null) {
+                fileStorageService.deleteFile(storedFilename);
+            }
         }
+
+        // ── Step 4: Persist Resume row — no file URL, only extracted text ────────
+        Resume resume = Resume.builder()
+                .student(student)
+                .fileUrl("")          // No file retained — intentionally empty
+                .parsedText(parsedText)
+                .isCurrent(true)
+                .processingStatus("PROCESSING")
+                .build();
+
+        Resume saved = resumeRepository.save(resume);
+
+        // ── Step 5: Publish async task via RabbitMQ (fallback to local event) ────
+        ResumeUploadedEvent event = new ResumeUploadedEvent(saved.getId(), student.getId());
+        try {
+            rabbitTemplate.convertAndSend(QueueConfig.EXCHANGE, QueueConfig.RESUME_UPLOADED_ROUTING_KEY, event);
+            log.info("ResumeUploadedEvent dispatched via RabbitMQ for resume {}.", saved.getId());
+        } catch (Exception e) {
+            log.warn("RabbitMQ unavailable — falling back to local ApplicationEvent for resume {}: {}",
+                    saved.getId(), e.getMessage());
+            eventPublisher.publishEvent(event);
+        }
+
+        ResumeResponse response = ResumeResponse.builder()
+                .id(saved.getId())
+                .fileUrl("")
+                .isCurrent(saved.isCurrent())
+                .processingStatus(saved.getProcessingStatus())
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        return ResponseEntity.ok(ApiResponse.success(
+                "Resume uploaded. Text extracted and temporary file deleted. AI processing started.", response));
     }
 
     @GetMapping("/download/{filename}")

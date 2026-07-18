@@ -57,4 +57,23 @@ public class FileStorageService {
         }
         return Files.newInputStream(filePath);
     }
+
+    /**
+     * Deletes a previously stored file by filename.
+     * Called immediately after text extraction to ensure the raw resume
+     * is never kept in permanent storage — only parsed text is retained.
+     */
+    public void deleteFile(String filename) {
+        try {
+            Path filePath = this.rootDir.resolve(filename).normalize();
+            boolean deleted = Files.deleteIfExists(filePath);
+            if (deleted) {
+                log.info("Deleted temp resume file: {}", filename);
+            } else {
+                log.warn("Temp resume file not found for deletion (already removed?): {}", filename);
+            }
+        } catch (IOException e) {
+            log.error("Failed to delete temp resume file {}: {}", filename, e.getMessage());
+        }
+    }
 }
