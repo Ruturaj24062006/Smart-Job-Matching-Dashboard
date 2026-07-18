@@ -1,5 +1,6 @@
 package com.careermatch.backend.security;
 
+import com.careermatch.backend.auth.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,9 +20,11 @@ import java.util.Collections;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final UserRepository userRepository;
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
+    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, UserRepository userRepository) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -46,11 +49,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            // Verify JWT signature and expiration statelessly without database lookup
+            // Verify JWT signature and expiration statelessly
             if (jwtTokenProvider.validateTokenSignatureAndExpiry(jwt)) {
                 String role = jwtTokenProvider.extractRole(jwt);
                 
-                // Construct stateless UserDetails directly from verified JWT claims
+                // Resolve actual role from local database if token has Supabase default "authenticated" role
+                if ("ROLE_AUTHENTICATED".equalsIgnoreCase(role)) {
+                    var userOpt = userRepository.findByEmail(username);
+                    if (userOpt.isPresent()) {
+                        role = userOpt.get().getRole().name(); // e.g. ROLE_RECRUITER or ROLE_STUDENT
+                    }
+                }
+                
+                // Construct stateless UserDetails directly
                 UserDetails userDetails = new org.springframework.security.core.userdetails.User(
                         username,
                         "",
