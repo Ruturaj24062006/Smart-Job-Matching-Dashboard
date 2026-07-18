@@ -151,63 +151,9 @@ export class StudentDashboard implements OnInit {
       id: '00000000-0000-0000-0000-000000000000',
       firstName: this.getStudentName(),
       lastName: '',
-      bio: 'Enthusiastic developer.',
-      profileCompletedPct: 88
+      profileCompletedPct: 0
     } as any);
     this.loadDashboardData();
-  }
-
-  private getMockMatches(): any[] {
-    return [
-      {
-        id: '11111111-1111-1111-1111-111111111111',
-        jobId: '22222222-2222-2222-2222-222222222222',
-        jobTitle: 'Software Engineering Intern',
-        companyName: 'Smart Job Matching Co.',
-        location: 'San Francisco, CA',
-        jobType: 'HYBRID',
-        salaryRange: '₹8–12 LPA',
-        compositeScore: 84,
-        technicalFit: 85,
-        projectFit: 80,
-        experienceFit: 90,
-        domainFit: 75,
-        behavioralFit: 90,
-        educationFit: 85
-      },
-      {
-        id: '21111111-1111-1111-1111-111111111111',
-        jobId: '22222222-2222-2222-2222-222222222223',
-        jobTitle: 'Backend Spring Boot Developer',
-        companyName: 'Nexus Intelligence Co.',
-        location: 'Bengaluru, KA',
-        jobType: 'OFFICE',
-        salaryRange: '₹12–18 LPA',
-        compositeScore: 92,
-        technicalFit: 95,
-        projectFit: 90,
-        experienceFit: 95,
-        domainFit: 85,
-        behavioralFit: 95,
-        educationFit: 90
-      },
-      {
-        id: '31111111-1111-1111-1111-111111111111',
-        jobId: '22222222-2222-2222-2222-222222222224',
-        jobTitle: 'Frontend Engineer (Angular)',
-        companyName: 'Aesthetic Web Corp.',
-        location: 'Remote',
-        jobType: 'REMOTE',
-        salaryRange: '₹10–14 LPA',
-        compositeScore: 78,
-        technicalFit: 80,
-        projectFit: 75,
-        experienceFit: 80,
-        domainFit: 70,
-        behavioralFit: 85,
-        educationFit: 80
-      }
-    ];
   }
 
   loadDashboardData(): void {
@@ -228,12 +174,14 @@ export class StudentDashboard implements OnInit {
           });
           this.appliedJobIds.set(ids);
         } else {
-          this.loadMockApplications();
+          this.myApplications.set([]);
+          this.applicationsCount.set(0);
         }
       },
       error: (err) => {
-        console.warn('Failed to load student applications, fallback to mock...', err);
-        this.loadMockApplications();
+        console.warn('Failed to load student applications:', err);
+        this.myApplications.set([]);
+        this.applicationsCount.set(0);
       }
     });
 
@@ -243,52 +191,33 @@ export class StudentDashboard implements OnInit {
         if (res.success && Array.isArray(res.data) && res.data.length > 0) {
           this.processMatches(res.data);
         } else {
-          // If no matches, generate them
           this.triggerMatchGeneration();
         }
       },
       error: (err) => {
-        console.warn('No matches fetched, loading mock recommendations...', err);
-        this.processMatches(this.getMockMatches());
+        console.warn('No matches fetched:', err);
+        this.processMatches([]);
       }
     });
   }
 
-  private loadMockApplications(): void {
-    const mockApps = [
-      {
-        id: 'mock_app_1',
-        status: 'INTERVIEW',
-        createdAt: new Date().toISOString(),
-        feedback: 'Interview scheduled. Looking forward to discussing details!',
-        job: {
-          title: 'Software Engineering Intern',
-          company: { name: 'Smart Job Matching Co.' },
-          location: 'San Francisco, CA'
-        }
-      }
-    ];
-    this.myApplications.set(mockApps);
-    this.applicationsCount.set(mockApps.length);
-  }
-
   triggerMatchGeneration(): void {
     this.matchesService.generateMatches().subscribe({
-      next: (res) => {
+      next: () => {
         this.matchesService.getMatches().subscribe({
           next: (mRes) => {
-            if (mRes.success && Array.isArray(mRes.data) && mRes.data.length > 0) {
+            if (mRes.success && Array.isArray(mRes.data)) {
               this.processMatches(mRes.data);
             } else {
-              this.processMatches(this.getMockMatches());
+              this.processMatches([]);
             }
           },
-          error: () => this.processMatches(this.getMockMatches())
+          error: () => this.processMatches([])
         });
       },
       error: (err) => {
-        console.error('Failed to generate matches, fallback to mock...', err);
-        this.processMatches(this.getMockMatches());
+        console.error('Failed to generate matches:', err);
+        this.processMatches([]);
       }
     });
   }

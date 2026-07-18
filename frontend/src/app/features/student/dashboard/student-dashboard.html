@@ -1,69 +1,83 @@
-<app-navbar></app-navbar>
-
-<div class="student-job-board-container">
+<div class="full-screen-dashboard-wrapper">
   <div class="board-layout-grid">
     
-    <!-- LEFT SIDEBAR (Matching Image 1 & Image 2 Layout) -->
-    <aside class="board-sidebar glass-card animate-fade-in">
-      <div class="sidebar-brand-box">
-        <span class="brand-title">JOB MATCH PRO</span>
-      </div>
-
-      <div class="sidebar-menu-section">
-        <div class="sidebar-section-header">
-          <span>Job Boards</span>
-          <button type="button" class="icon-add-btn" (click)="navigateToResumeUpload()" title="Create new job board">+</button>
+    <!-- LEFT SIDEBAR (Matching Image 1 & 2 Exact Layout) -->
+    <aside class="board-sidebar animate-fade-in">
+      <div class="sidebar-top-group">
+        <div class="sidebar-brand-box">
+          <div class="brand-logo-row">
+            <span class="brand-icon">⚡</span>
+            <span class="brand-title">JOB MATCH PRO</span>
+          </div>
         </div>
 
-        <ul class="job-boards-list">
-          <li class="board-item" [class.active]="selectedJobBoard() === 'All Matches'" (click)="selectJobBoard('All Matches')">
-            <span class="board-bullet">•</span> All Matches
-          </li>
-          <li class="board-item" [class.active]="selectedJobBoard() === 'Java Developer'" (click)="selectJobBoard('Java Developer')">
-            <span class="board-bullet">•</span> Java Developer
-          </li>
-          <li class="board-item" [class.active]="selectedJobBoard() === '.Net Developer'" (click)="selectJobBoard('.Net Developer')">
-            <span class="board-bullet">•</span> .Net Developer
-          </li>
-          <li class="board-item" [class.active]="selectedJobBoard() === 'Frontend Engineer'" (click)="selectJobBoard('Frontend Engineer')">
-            <span class="board-bullet">•</span> Frontend Engineer
-          </li>
-          <li class="board-item" [class.active]="selectedJobBoard() === 'AI Engineer'" (click)="selectJobBoard('AI Engineer')">
-            <span class="board-bullet">•</span> AI Engineer
-          </li>
-          <li class="create-new-board-btn" (click)="navigateToResumeUpload()">
-            + Create a new job board
-          </li>
-        </ul>
-      </div>
-
-      <div class="sidebar-menu-section">
-        <ul class="nav-links-list">
-          <li class="nav-link-item" [class.active]="activeTab() === 'recommendations'" (click)="changeTab('recommendations')">
-            🎯 Recommendations
-          </li>
-          <li class="nav-link-item" [class.active]="activeTab() === 'discover'" (click)="changeTab('discover')">
-            🔍 Discover Jobs
-          </li>
-          <li class="nav-link-item" [class.active]="activeTab() === 'applications'" (click)="changeTab('applications')">
-            📋 Applications ({{ applicationsCount() }})
-          </li>
-          <li class="nav-link-item" (click)="navigateToResumeUpload()">
-            📄 Upload Resume
-          </li>
-          <li class="nav-link-item" (click)="router.navigate(['/student/profile-review'])">
-            ✏️ Review Profile
-          </li>
-        </ul>
-      </div>
-
-      <div class="sidebar-plan-card glass-card">
-        <div class="plan-info">
-          <span class="plan-lbl">Current Plan:</span>
-          <span class="plan-val">Free</span>
+        <div class="sidebar-menu-section">
+          <ul class="nav-links-list">
+            <li class="nav-link-item" [class.active]="activeTab() === 'recommendations'" (click)="changeTab('recommendations')">
+              <span class="nav-icon">📊</span> Dashboard
+            </li>
+          </ul>
         </div>
-        <button type="button" class="btn btn-primary btn-sm upgrade-pro-btn" (click)="navigateToResumeUpload()">
-          🚀 UPGRADE TO PRO
+
+        <div class="sidebar-menu-section">
+          <div class="sidebar-section-header">
+            <span>Job Boards</span>
+            <button type="button" class="icon-add-btn" (click)="navigateToResumeUpload()" title="Create new job board">+</button>
+          </div>
+
+          <ul class="job-boards-list">
+            <li class="board-item" [class.active]="selectedJobBoard() === 'All Matches'" (click)="selectJobBoard('All Matches')">
+              <span class="board-bullet">•</span> All Matches
+            </li>
+            <li class="board-item" [class.active]="selectedJobBoard() === '.Net Developer'" (click)="selectJobBoard('.Net Developer')">
+              <span class="board-bullet">•</span> .Net Developer
+            </li>
+            <li class="board-item" [class.active]="selectedJobBoard() === 'Java Developer'" (click)="selectJobBoard('Java Developer')">
+              <span class="board-bullet">•</span> Java Developer
+            </li>
+            <li class="board-item" [class.active]="selectedJobBoard() === 'Frontend Engineer'" (click)="selectJobBoard('Frontend Engineer')">
+              <span class="board-bullet">•</span> Frontend Engineer
+            </li>
+            <li class="board-item" [class.active]="selectedJobBoard() === 'AI Engineer'" (click)="selectJobBoard('AI Engineer')">
+              <span class="board-bullet">•</span> AI Engineer
+            </li>
+            <li class="create-new-board-btn" (click)="navigateToResumeUpload()">
+              + Create a new job board
+            </li>
+          </ul>
+        </div>
+
+        <div class="sidebar-menu-section">
+          <ul class="nav-links-list">
+            <li class="nav-link-item" [class.active]="activeTab() === 'discover'" (click)="changeTab('discover')">
+              <span class="nav-icon">📜</span> History / Discover
+            </li>
+            <li class="nav-link-item" (click)="changeTab('recommendations')">
+              <span class="nav-icon">🔖</span> Saved Jobs ({{ savedJobIds().size }})
+            </li>
+            <li class="nav-link-item" (click)="router.navigate(['/student/profile-review'])">
+              <span class="nav-icon">✏️</span> Edit Job Board
+            </li>
+            <li class="nav-link-item" (click)="navigateToResumeUpload()">
+              <span class="nav-icon">📄</span> Upload Resume
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="sidebar-bottom-group">
+        <div class="sidebar-plan-card">
+          <div class="plan-info">
+            <span class="plan-lbl">Current Plan:</span>
+            <span class="plan-val">Free</span>
+          </div>
+          <button type="button" class="btn btn-primary btn-sm upgrade-pro-btn" (click)="navigateToResumeUpload()">
+            🚀 UPGRADE TO PRO
+          </button>
+        </div>
+
+        <button type="button" class="btn-signout-sidebar" (click)="onLogout()">
+          <span class="signout-icon">🚪</span> Sign Out
         </button>
       </div>
     </aside>
