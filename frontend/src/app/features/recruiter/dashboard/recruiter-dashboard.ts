@@ -544,40 +544,47 @@ export class RecruiterDashboard implements OnInit {
         }
       },
       error: (err) => {
-        console.warn('Backend server down. Activating developer mock save fallback...', err);
-        const mockJob = {
-          id: this.jobForm.id || Math.random().toString(36).substring(7),
-          title: this.jobForm.title,
-          description: this.jobForm.description,
-          requirements: this.jobForm.requirements || '',
-          location: this.jobForm.location || 'Remote',
-          jobType: this.jobForm.jobType || 'FULL_TIME',
-          experienceLevel: this.jobForm.experienceLevel || '',
-          salaryRange: this.jobForm.salaryRange || '',
-          requiredSkills: this.jobForm.requiredSkills || '',
-          preferredSkills: this.jobForm.preferredSkills || '',
-          workMode: this.jobForm.workMode || 'HYBRID',
-          educationLevel: this.jobForm.educationLevel || '',
-          sponsorshipAvailable: this.jobForm.sponsorshipAvailable || false,
-          status: 'ACTIVE',
-          createdAt: new Date().toISOString()
-        };
-
-        if (this.jobForm.id) {
-          const updated = this.myJobs().map(j => j.id === this.jobForm.id ? mockJob : j);
-          this.myJobs.set(updated);
-        } else {
-          this.myJobs.set([mockJob, ...this.myJobs()]);
-        }
-
-        // Recalculate dashboard metrics
-        this.calculateMetricsAndGraphs(this.allCompanyApplications());
-
         this.isSubmittingJob.set(false);
-        this.jobSuccessMessage.set(this.jobForm.id ? 'Job updated successfully (Local fallback)!' : 'Job posted successfully (Local fallback)!');
-        setTimeout(() => {
-          this.selectMenu('all-jobs');
-        }, 1200);
+        const errorMsg = err.error?.message || err.error?.error || 'Failed to save the job posting.';
+
+        if (err.status === 0) {
+          console.warn('Backend server down. Activating developer mock save fallback...', err);
+          const mockJob = {
+            id: this.jobForm.id || Math.random().toString(36).substring(7),
+            title: this.jobForm.title,
+            description: this.jobForm.description,
+            requirements: this.jobForm.requirements || '',
+            location: this.jobForm.location || 'Remote',
+            jobType: this.jobForm.jobType || 'FULL_TIME',
+            experienceLevel: this.jobForm.experienceLevel || '',
+            salaryRange: this.jobForm.salaryRange || '',
+            requiredSkills: this.jobForm.requiredSkills || '',
+            preferredSkills: this.jobForm.preferredSkills || '',
+            workMode: this.jobForm.workMode || 'HYBRID',
+            educationLevel: this.jobForm.educationLevel || '',
+            sponsorshipAvailable: this.jobForm.sponsorshipAvailable || false,
+            status: 'ACTIVE',
+            createdAt: new Date().toISOString()
+          };
+
+          if (this.jobForm.id) {
+            const updated = this.myJobs().map(j => j.id === this.jobForm.id ? mockJob : j);
+            this.myJobs.set(updated);
+          } else {
+            this.myJobs.set([mockJob, ...this.myJobs()]);
+          }
+
+          // Recalculate dashboard metrics
+          this.calculateMetricsAndGraphs(this.allCompanyApplications());
+
+          this.jobSuccessMessage.set(this.jobForm.id ? 'Job updated successfully (Local fallback)!' : 'Job posted successfully (Local fallback)!');
+          setTimeout(() => {
+            this.selectMenu('all-jobs');
+            this.jobSuccessMessage.set(null);
+          }, 1200);
+        } else {
+          this.jobErrorMessage.set(errorMsg);
+        }
       }
     });
   }
