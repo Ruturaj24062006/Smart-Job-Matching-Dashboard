@@ -96,18 +96,18 @@
             <span>EXPLORE & SETTINGS</span>
           </div>
           <ul class="nav-links-list">
-            <li class="nav-link-item" (click)="router.navigate(['/student/find-jobs'])">
+            <li class="nav-link-item" [class.active]="activeTab() === 'discover'" (click)="changeTab('discover')">
               <svg class="nav-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="10"/>
                 <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
               </svg>
               <span>Find & Search Jobs</span>
             </li>
-            <li class="nav-link-item" (click)="changeTab('recommendations')">
+            <li class="nav-link-item" [class.active]="activeTab() === 'applications'" (click)="changeTab('applications')">
               <svg class="nav-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                 <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
               </svg>
-              <span>Saved Jobs</span>
+              <span>Saved Jobs & Applications</span>
               <span class="saved-count-badge" *ngIf="savedJobIds().size > 0">{{ savedJobIds().size }}</span>
             </li>
             <li class="nav-link-item" (click)="router.navigate(['/student/profile-review'])">

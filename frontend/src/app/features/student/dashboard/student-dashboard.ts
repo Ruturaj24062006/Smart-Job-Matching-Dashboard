@@ -120,6 +120,13 @@ export class StudentDashboard implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.updateGreeting();
+    const currentUrl = this.router.url;
+    if (currentUrl.includes('find-jobs') || currentUrl.includes('jobs') || currentUrl.includes('discover')) {
+      this.activeTab.set('discover');
+      this.searchJobs();
+    } else if (currentUrl.includes('applications')) {
+      this.activeTab.set('applications');
+    }
     this.checkProfileCompletenessAndLoad();
   }
 
@@ -367,8 +374,21 @@ export class StudentDashboard implements OnInit, OnDestroy {
 
   changeTab(tab: 'recommendations' | 'discover' | 'applications'): void {
     this.activeTab.set(tab);
-    if (tab === 'discover' && this.searchResults().length === 0) {
-      this.searchJobs();
+    if (tab === 'discover') {
+      if (this.searchResults().length === 0) {
+        this.searchJobs();
+      }
+      if (typeof window !== 'undefined') {
+        window.history.replaceState({}, '', '/student/find-jobs');
+      }
+    } else if (tab === 'recommendations') {
+      if (typeof window !== 'undefined') {
+        window.history.replaceState({}, '', '/student/dashboard');
+      }
+    } else if (tab === 'applications') {
+      if (typeof window !== 'undefined') {
+        window.history.replaceState({}, '', '/student/dashboard');
+      }
     }
   }
 
