@@ -154,11 +154,10 @@
       <!-- Dashboard Graphs & Analytics -->
       <div class="dashboard-graphs-row animate-fade-in">
         <!-- 1. Applications over Time -->
-        <div class="glass-card graph-card">
+        <div class="glass-card graph-card" *ngIf="applicationsOverTime().length > 0">
           <h3 class="graph-title">Applications over Time</h3>
           <div class="graph-container time-graph">
-            <div *ngIf="applicationsOverTime().length === 0" class="graph-placeholder">No application date records yet.</div>
-            <div class="time-bars-wrapper" *ngIf="applicationsOverTime().length > 0">
+            <div class="time-bars-wrapper">
               <div class="time-bar-column" *ngFor="let item of applicationsOverTime()">
                 <div class="time-bar-fill" [style.height.%]="(item.count * 15)" [title]="item.count + ' applications'"></div>
                 <span class="time-bar-label">{{ item.date }}</span>
@@ -168,11 +167,10 @@
         </div>
 
         <!-- 2. Applications by Status -->
-        <div class="glass-card graph-card">
+        <div class="glass-card graph-card" *ngIf="applicationsByStatus().length > 0">
           <h3 class="graph-title">Applications by Status</h3>
           <div class="graph-container status-graph">
-            <div *ngIf="applicationsByStatus().length === 0" class="graph-placeholder">No applications submitted yet.</div>
-            <div class="status-list" *ngIf="applicationsByStatus().length > 0">
+            <div class="status-list">
               <div class="status-item" *ngFor="let item of applicationsByStatus()">
                 <span class="status-name">{{ item.status }}</span>
                 <div class="status-bar-bg">
@@ -187,11 +185,10 @@
 
       <div class="dashboard-graphs-row animate-fade-in">
         <!-- 3. Top Skills Requested -->
-        <div class="glass-card graph-card">
+        <div class="glass-card graph-card" *ngIf="topSkillsRequested().length > 0">
           <h3 class="graph-title">Top Skills Requested</h3>
           <div class="graph-container skills-graph">
-            <div *ngIf="topSkillsRequested().length === 0" class="graph-placeholder">No skill tags listed in active job posts.</div>
-            <div class="skills-list" *ngIf="topSkillsRequested().length > 0">
+            <div class="skills-list">
               <div class="skill-row" *ngFor="let s of topSkillsRequested(); let i = index">
                 <span class="skill-rank">#{{ i + 1 }}</span>
                 <span class="skill-name">{{ s.skill }}</span>
@@ -205,11 +202,10 @@
         </div>
 
         <!-- 4. Candidate Match Distribution -->
-        <div class="glass-card graph-card">
+        <div class="glass-card graph-card" *ngIf="matchDistribution().length > 0">
           <h3 class="graph-title">Candidate Match Distribution</h3>
           <div class="graph-container dist-graph">
-            <div *ngIf="matchDistribution().length === 0" class="graph-placeholder">No match scores generated yet.</div>
-            <div class="dist-list" *ngIf="matchDistribution().length > 0">
+            <div class="dist-list">
               <div class="dist-item" *ngFor="let item of matchDistribution()">
                 <span class="dist-label">{{ item.range }}</span>
                 <div class="dist-bar-bg">
@@ -412,18 +408,25 @@
           <h1 class="workspace-title">Manage Job Listings</h1>
           <p class="workspace-subtitle">Filter, view, edit, duplicate, or delete your published job postings</p>
         </div>
-        <div class="job-actions-toolbar">
-          <button class="btn btn-primary btn-sm" (click)="selectMenu('create-job')">+ Create Job</button>
-          <button class="btn btn-secondary btn-sm" (click)="exportJobs()">Export Jobs</button>
-          
+        <button class="btn btn-primary" (click)="selectMenu('create-job')">+ Create Job</button>
+      </div>
+
+      <!-- Enterprise Job Filter Toolbar -->
+      <div class="job-table-filter-bar glass-card animate-fade-in">
+        <div class="filter-left">
+          <button class="filter-tab-btn" [class.active]="!showArchivedOnly()" (click)="showArchivedOnly.set(false)">
+            Active Listings ({{ activeJobsCount() }})
+          </button>
+          <button class="filter-tab-btn" [class.active]="showArchivedOnly()" (click)="showArchivedOnly.set(true)">
+            Closed / Archived ({{ closedJobsCount() }})
+          </button>
+        </div>
+        <div class="filter-right">
+          <button class="btn btn-secondary btn-sm" (click)="exportJobs()">Export JSON</button>
           <label class="btn btn-secondary btn-sm label-file-input">
-            Import Jobs
+            Import JSON
             <input type="file" (change)="importJobs($event)" accept=".json" style="display: none;">
           </label>
-
-          <button class="btn btn-warning btn-sm" (click)="showArchivedOnly.set(!showArchivedOnly())">
-            {{ showArchivedOnly() ? 'Show Active Listings' : 'Show Closed/Archived' }}
-          </button>
         </div>
       </div>
 
