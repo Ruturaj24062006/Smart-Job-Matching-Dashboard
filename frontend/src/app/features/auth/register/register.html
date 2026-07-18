@@ -8,10 +8,12 @@
 
     <!-- Success & Error Banners -->
     <div *ngIf="successMessage()" class="alert alert-success">
-      {{ successMessage() }}
+      <span>{{ successMessage() }}</span>
+      <a routerLink="/login" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem; display: inline-block;">Go to Login &rarr;</a>
     </div>
     <div *ngIf="errorMessage()" class="alert alert-error">
-      {{ errorMessage() }}
+      <span>{{ errorMessage() }}</span>
+      <a *ngIf="errorMessage()?.includes('log in') || errorMessage()?.includes('registered')" routerLink="/login" class="btn btn-secondary btn-sm" style="margin-top: 0.5rem; display: inline-block;">Go to Login &rarr;</a>
     </div>
 
     <!-- Role Selection Tabs -->

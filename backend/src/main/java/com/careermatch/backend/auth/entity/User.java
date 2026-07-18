@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.data.domain.Persistable;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -14,11 +15,14 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class User {
+public class User implements Persistable<UUID> {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
+
+    @Transient
+    @Builder.Default
+    private boolean isNewUser = true;
 
     @Column(unique = true, nullable = false)
     private String email;
@@ -54,4 +58,15 @@ public class User {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Override
+    public boolean isNew() {
+        return isNewUser;
+    }
+
+    @PostLoad
+    @PostPersist
+    void markNotNew() {
+        this.isNewUser = false;
+    }
 }

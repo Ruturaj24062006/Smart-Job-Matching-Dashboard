@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.data.domain.Persistable;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -16,10 +17,14 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Recruiter {
+public class Recruiter implements Persistable<UUID> {
 
     @Id
     private UUID id; // Primary key matches User's ID
+
+    @Transient
+    @Builder.Default
+    private boolean isNewEntity = true;
 
     @OneToOne(fetch = FetchType.LAZY)
     @MapsId
@@ -45,4 +50,15 @@ public class Recruiter {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Override
+    public boolean isNew() {
+        return isNewEntity;
+    }
+
+    @PostLoad
+    @PostPersist
+    void markNotNew() {
+        this.isNewEntity = false;
+    }
 }

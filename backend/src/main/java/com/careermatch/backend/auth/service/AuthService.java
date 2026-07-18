@@ -52,18 +52,19 @@ public class AuthService {
 
     @Transactional
     public String register(RegisterRequest request) {
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new BadRequestException("Email is already registered");
+        String email = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
+        if (userRepository.findByEmail(email).isPresent()) {
+            throw new BadRequestException("This email is already registered. Please log in instead.");
         }
 
         // 1. Sign up user in Supabase Auth and get their Supabase UUID
-        String supabaseUserId = signupInSupabase(request.getEmail(), request.getPassword());
+        String supabaseUserId = signupInSupabase(email, request.getPassword());
         UUID userId = UUID.fromString(supabaseUserId);
 
         // 2. Save User in local PostgreSQL using the Supabase UUID as primary key
         User user = User.builder()
                 .id(userId)
-                .email(request.getEmail())
+                .email(email)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .role(request.getRole())
                 .isVerified(true) // Supabase Auth manages email verification status
@@ -83,10 +84,10 @@ public class AuthService {
         } else if (request.getRole() == UserRole.ROLE_RECRUITER) {
             Company company = null;
             if (request.getCompanyName() != null && !request.getCompanyName().isBlank()) {
-                company = companyRepository.findByNameIgnoreCase(request.getCompanyName())
+                company = companyRepository.findByNameIgnoreCase(request.getCompanyName().trim())
                         .orElseGet(() -> companyRepository.save(
                                 Company.builder()
-                                        .name(request.getCompanyName())
+                                        .name(request.getCompanyName().trim())
                                         .isVerified(false)
                                         .build()
                         ));
@@ -106,14 +107,15 @@ public class AuthService {
 
     @Transactional
     public LoginResponse login(LoginRequest request) {
+        String email = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
         // 1. Authenticate with Supabase Auth to obtain valid Supabase JWT
-        Map<String, Object> tokenData = loginInSupabase(request.getEmail(), request.getPassword());
+        Map<String, Object> tokenData = loginInSupabase(email, request.getPassword());
         String accessToken = (String) tokenData.get("access_token");
         String refreshToken = (String) tokenData.get("refresh_token");
 
         // 2. Fetch locally stored User record
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new BadRequestException("User profile not found locally. Please register first."));
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BadRequestException("User profile not found. Please register first."));
 
         return LoginResponse.builder()
                 .userId(user.getId())
@@ -152,9 +154,18 @@ public class AuthService {
                 }
             }
             throw new RuntimeException("Could not find user ID in Supabase response");
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            log.error("Failed to sign up in Supabase: {}", e.getResponseBodyAsString());
+            String responseBody = e.getResponseBodyAsString();
+            if (responseBody.contains("already registered") || responseBody.contains("already_exists") || responseBody.contains("User already registered")) {
+                throw new BadRequestException("This email is already registered. Please log in instead.");
+            }
         } catch (Exception e) {
             log.error("Failed to sign up in Supabase: {}", e.getMessage());
-            throw new BadRequestException("Supabase signup failed: " + e.getMessage());
+            if (e.getMessage() != null && (e.getMessage().contains("already registered") || e.getMessage().contains("already_exists"))) {
+                throw new BadRequestException("This email is already registered. Please log in instead.");
+            }
+            throw new BadRequestException("Registration failed: " + e.getMessage());
         }
     }
 

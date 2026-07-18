@@ -7,6 +7,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
+import org.springframework.data.domain.Persistable;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -20,10 +21,14 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString(exclude = {"user", "skills", "projects", "experience", "education", "certifications"})
-public class Student {
+public class Student implements Persistable<UUID> {
 
     @Id
     private UUID id; // Primary key matches User's ID
+
+    @Transient
+    @Builder.Default
+    private boolean isNewEntity = true;
 
     @OneToOne(fetch = FetchType.LAZY)
     @MapsId
@@ -90,4 +95,15 @@ public class Student {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Override
+    public boolean isNew() {
+        return isNewEntity;
+    }
+
+    @PostLoad
+    @PostPersist
+    void markNotNew() {
+        this.isNewEntity = false;
+    }
 }
