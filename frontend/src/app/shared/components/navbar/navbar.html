@@ -51,8 +51,28 @@
 
       <!-- Unauthenticated Get Started Button -->
       <a *ngIf="!isLoggedIn()" routerLink="/register" class="btn btn-primary btn-sm">Get Started</a>
-      <!-- Authenticated Dashboard Button -->
-      <a *ngIf="isLoggedIn()" [routerLink]="getDashboardLink()" class="btn btn-primary btn-sm">My Dashboard</a>
+      
+      <!-- Authenticated User Profile Dropdown (for Recruiter specifically) -->
+      <div class="user-profile-container" *ngIf="isLoggedIn() && recruiterProfile()">
+        <button type="button" class="profile-trigger-btn" (click)="toggleProfileDropdown($event)">
+          <div class="profile-avatar-sm">{{ recruiterProfile()?.companyName?.substring(0, 1) }}</div>
+          <span class="profile-company-name-sm">{{ recruiterProfile()?.companyName }}</span>
+          <svg class="chevron-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="16"><path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" /></svg>
+        </button>
+
+        <div class="profile-menu-dropdown glass-card animate-scale-up" *ngIf="isProfileDropdownOpen()" (click)="$event.stopPropagation()">
+          <div class="dropdown-profile-header">
+            <span class="dropdown-company">{{ recruiterProfile()?.companyName }}</span>
+            <span class="dropdown-role">{{ recruiterProfile()?.jobTitle || 'Recruiter' }}</span>
+          </div>
+          <div class="dropdown-divider"></div>
+          <a [routerLink]="getDashboardLink()" class="dropdown-menu-item">My Dashboard</a>
+          <a (click)="onLogout()" class="dropdown-menu-item logout-item">Log Out</a>
+        </div>
+      </div>
+
+      <!-- Standard Dashboard Button for other authenticated roles -->
+      <a *ngIf="isLoggedIn() && !recruiterProfile()" [routerLink]="getDashboardLink()" class="btn btn-primary btn-sm">My Dashboard</a>
     </div>
   </div>
 </header>

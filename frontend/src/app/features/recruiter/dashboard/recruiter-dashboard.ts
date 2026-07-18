@@ -1,13 +1,15 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { RecruiterProfileService, RecruiterProfileDto } from '../../../core/services/recruiter-profile.service';
 import { JobService, JobCreateDto } from '../../../core/services/job.service';
 import { JobApplicationsService } from '../../../core/services/job-applications.service';
+import { StudentProfileService } from '../../../core/services/student-profile.service';
 import { Navbar } from '../../../shared/components/navbar/navbar';
 import { Footer } from '../../../shared/components/footer/footer';
 import { NgIf, NgFor, NgClass, DatePipe, SlicePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { interval, Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-recruiter-dashboard',
@@ -15,11 +17,16 @@ import { FormsModule } from '@angular/forms';
   templateUrl: './recruiter-dashboard.html',
   styleUrl: './recruiter-dashboard.css'
 })
-export class RecruiterDashboard implements OnInit {
+export class RecruiterDashboard implements OnInit, OnDestroy {
+  private pollingSubscription: Subscription | null = null;
+  private readonly POLL_INTERVAL_MS = 30000; // 30 seconds real-time polling
   profile: RecruiterProfileDto | null = null;
   stats = signal<any | null>(null);
   recentApplications = signal<any[]>([]);
   isLoadingStats = signal<boolean>(false);
+  lastUpdated = signal<Date | null>(null);
+  isRefreshing = signal<boolean>(false);
+
 
   // Real-Time Computed Stats
   allCompanyApplications = signal<any[]>([]);
@@ -30,6 +37,7 @@ export class RecruiterDashboard implements OnInit {
   interviewsScheduledCount = signal<number>(0);
   offersSentCount = signal<number>(0);
   hiringSuccessRate = signal<number>(0);
+  averageMatchScore = signal<number>(0);
 
   // Real-Time Graph Data
   applicationsOverTime = signal<{ date: string, count: number }[]>([]);
@@ -73,7 +81,19 @@ export class RecruiterDashboard implements OnInit {
   jobSuccessMessage = signal<string | null>(null);
 
   // Candidate Matching & Application Management
-  showArchivedOnly = signal<boolean>(false);
+  searchQuery = signal<string>('');
+  filterStatus = signal<string>('ALL');
+  filterLocation = signal<string>('');
+  filterWorkMode = signal<string>('ALL');
+  filterJobType = signal<string>('ALL');
+  filterExperience = signal<string>('ALL');
+  filterMinApps = signal<number | null>(null);
+  filterMaxApps = signal<number | null>(null);
+  sortParam = signal<string>('NEWEST');
+  currentPage = signal<number>(1);
+  pageSize = signal<number>(10);
+  isFilterPanelExpanded = signal<boolean>(false);
+
   selectedJobForDetail = signal<any | null>(null);
   selectedJobIdForMatching = signal<string>('');
   matchingCandidates = signal<any[]>([]);
@@ -84,6 +104,10 @@ export class RecruiterDashboard implements OnInit {
   filteredApplications = signal<any[]>([]);
   
   selectedApplicantDetail = signal<any | null>(null);
+  activeApplicantTab = signal<string>('ai-match');
+  selectedProfile = signal<any | null>(null);
+  isLoadingProfile = signal<boolean>(false);
+  isMobileSidebarOpen = signal<boolean>(false);
   isActionModalOpen = signal<boolean>(false);
   actionType = ''; // 'SHORTLIST' | 'REJECT' | 'INTERVIEW'
   actionFeedback = '';
@@ -97,7 +121,8 @@ export class RecruiterDashboard implements OnInit {
     websiteUrl: '',
     location: '',
     description: '',
-    logoUrl: ''
+    logoUrl: '',
+    jobTitle: ''
   };
   isUpdatingProfile = signal<boolean>(false);
   profileMessage = signal<string | null>(null);
@@ -115,12 +140,90 @@ export class RecruiterDashboard implements OnInit {
     private readonly profileService: RecruiterProfileService,
     private readonly jobService: JobService,
     private readonly applicationsService: JobApplicationsService,
+    private readonly studentProfileService: StudentProfileService,
     public readonly router: Router
   ) {}
 
   ngOnInit(): void {
     this.checkOnboardingStatus();
   }
+
+  ngOnDestroy(): void {
+    if (this.pollingSubscription) {
+      this.pollingSubscription.unsubscribe();
+    }
+  }
+
+  /** Start real-time polling every 30 seconds to keep dashboard data fresh */
+  startPolling(): void {
+    if (this.pollingSubscription) return; // Already polling
+    this.pollingSubscription = interval(this.POLL_INTERVAL_MS).subscribe(() => {
+      this.silentRefreshAll();
+    });
+  }
+
+  /** Refresh all dashboard data — called explicitly after create/update/delete actions */
+  refreshAll(): void {
+    this.isRefreshing.set(true);
+    this.loadMyJobs();
+    this.loadStats();
+    if (this.selectedJobIdForMatching()) this.loadMatchingCandidates();
+    if (this.selectedJobIdForApplications()) this.loadFilteredApplications();
+    setTimeout(() => {
+      this.isRefreshing.set(false);
+      this.lastUpdated.set(new Date());
+    }, 2000);
+  }
+
+  /** Silent refresh (no loading spinner) — used by the background polling */
+  silentRefreshAll(): void {
+    // Fetch jobs silently
+    this.jobService.getMyJobs().subscribe({
+      next: (res) => {
+        if (res.success && Array.isArray(res.data)) {
+          this.myJobs.set(res.data);
+          this.totalJobsCount.set(res.data.length);
+          this.activeJobsCount.set(res.data.filter((j: any) => j.status === 'ACTIVE').length);
+          this.closedJobsCount.set(res.data.filter((j: any) => j.status === 'CLOSED').length);
+
+          const jobIds = res.data.map((j: any) => j.id);
+          if (jobIds.length === 0) {
+            this.allCompanyApplications.set([]);
+            this.calculateMetricsAndGraphs([]);
+            this.lastUpdated.set(new Date());
+            return;
+          }
+          let loaded = 0;
+          const allApps: any[] = [];
+          jobIds.forEach((jobId: string) => {
+            this.applicationsService.getJobApplications(jobId).subscribe({
+              next: (appRes) => {
+                loaded++;
+                if (appRes.success && Array.isArray(appRes.data)) allApps.push(...appRes.data);
+                if (loaded === jobIds.length) {
+                  this.allCompanyApplications.set(allApps);
+                  this.calculateMetricsAndGraphs(allApps);
+                  this.lastUpdated.set(new Date());
+                }
+              },
+              error: () => {
+                loaded++;
+                if (loaded === jobIds.length) {
+                  this.allCompanyApplications.set(allApps);
+                  this.calculateMetricsAndGraphs(allApps);
+                  this.lastUpdated.set(new Date());
+                }
+              }
+            });
+          });
+        }
+      }
+    });
+    // Also silently reload applications if a job is selected
+    if (this.selectedJobIdForMatching()) this.loadMatchingCandidates();
+    if (this.selectedJobIdForApplications()) this.loadFilteredApplications();
+  }
+
 
   checkOnboardingStatus(): void {
     this.profileService.getProfile().subscribe({
@@ -136,7 +239,8 @@ export class RecruiterDashboard implements OnInit {
             websiteUrl: profileData.websiteUrl || '',
             location: profileData.location || '',
             description: profileData.description || '',
-            logoUrl: profileData.logoUrl || ''
+            logoUrl: profileData.logoUrl || '',
+            jobTitle: profileData.jobTitle || ''
           };
 
           if (!profileData.isVerified || !profileData.companyName || !profileData.industry) {
@@ -144,6 +248,8 @@ export class RecruiterDashboard implements OnInit {
           } else {
             this.loadStats();
             this.loadMyJobs();
+            // Start background polling after initial data is loaded
+            setTimeout(() => this.startPolling(), 5000);
           }
         }
       },
@@ -251,6 +357,11 @@ export class RecruiterDashboard implements OnInit {
     const rate = apps.length > 0 ? Math.round((offers / apps.length) * 100) : 0;
     this.hiringSuccessRate.set(rate);
 
+    // 4.5 Average Candidate Match Score
+    const totalScore = apps.reduce((sum, a) => sum + (a.matchScore || 0), 0);
+    const avgScore = apps.length > 0 ? Math.round(totalScore / apps.length) : 0;
+    this.averageMatchScore.set(avgScore);
+
     // 5. Applications over Time (group by date)
     const timeMap: Record<string, number> = {};
     apps.forEach(a => {
@@ -329,8 +440,123 @@ export class RecruiterDashboard implements OnInit {
   }
 
   getFilteredJobs(): any[] {
-    const showArchived = this.showArchivedOnly();
-    return this.myJobs().filter(j => showArchived ? (j.status === 'CLOSED' || j.status === 'PAUSED') : (j.status === 'ACTIVE' || j.status === 'DRAFT'));
+    let result = [...this.myJobs()];
+
+    // Search query
+    const q = this.searchQuery().toLowerCase().trim();
+    if (q) {
+      result = result.filter(j => 
+        j.title.toLowerCase().includes(q) || 
+        j.description.toLowerCase().includes(q) ||
+        (j.requiredSkills && j.requiredSkills.toLowerCase().includes(q))
+      );
+    }
+
+    // Status filter
+    const status = this.filterStatus();
+    if (status !== 'ALL') {
+      result = result.filter(j => j.status === status);
+    }
+
+    // Location filter
+    const loc = this.filterLocation().toLowerCase().trim();
+    if (loc) {
+      result = result.filter(j => j.location && j.location.toLowerCase().includes(loc));
+    }
+
+    // Work Mode
+    const wm = this.filterWorkMode();
+    if (wm !== 'ALL') {
+      result = result.filter(j => j.workMode === wm);
+    }
+
+    // Employment Type (Job Type)
+    const jt = this.filterJobType();
+    if (jt !== 'ALL') {
+      result = result.filter(j => j.jobType === jt);
+    }
+
+    // Experience Level
+    const exp = this.filterExperience();
+    if (exp !== 'ALL') {
+      result = result.filter(j => j.experienceLevel && j.experienceLevel.toLowerCase().includes(exp.toLowerCase()));
+    }
+
+    // App count range
+    const minApps = this.filterMinApps();
+    if (minApps !== null) {
+      result = result.filter(j => this.getJobApplicationsCount(j.id) >= minApps);
+    }
+    const maxApps = this.filterMaxApps();
+    if (maxApps !== null) {
+      result = result.filter(j => this.getJobApplicationsCount(j.id) <= maxApps);
+    }
+
+    // Sorting
+    const sort = this.sortParam();
+    if (sort === 'NEWEST') {
+      result.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+    } else if (sort === 'OLDEST') {
+      result.sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime());
+    } else if (sort === 'MOST_APPS') {
+      result.sort((a, b) => this.getJobApplicationsCount(b.id) - this.getJobApplicationsCount(a.id));
+    } else if (sort === 'HIGHEST_MATCH') {
+      result.sort((a, b) => this.getJobRecommendedCount(b.id) - this.getJobRecommendedCount(a.id));
+    } else if (sort === 'TITLE_AZ') {
+      result.sort((a, b) => a.title.localeCompare(b.title));
+    }
+
+    return result;
+  }
+
+  getPaginatedJobs(): any[] {
+    const filtered = this.getFilteredJobs();
+    const startIndex = (this.currentPage() - 1) * this.pageSize();
+    return filtered.slice(startIndex, startIndex + this.pageSize());
+  }
+
+  getTotalPages(): number {
+    return Math.ceil(this.getFilteredJobs().length / this.pageSize());
+  }
+
+  changePage(page: number): void {
+    const total = this.getTotalPages();
+    if (page >= 1 && page <= total) {
+      this.currentPage.set(page);
+    }
+  }
+
+  clearAllFilters(): void {
+    this.searchQuery.set('');
+    this.filterStatus.set('ALL');
+    this.filterLocation.set('');
+    this.filterWorkMode.set('ALL');
+    this.filterJobType.set('ALL');
+    this.filterExperience.set('ALL');
+    this.filterMinApps.set(null);
+    this.filterMaxApps.set(null);
+    this.currentPage.set(1);
+  }
+
+  removeFilter(type: string): void {
+    if (type === 'query') this.searchQuery.set('');
+    if (type === 'status') this.filterStatus.set('ALL');
+    if (type === 'location') this.filterLocation.set('');
+    if (type === 'workMode') this.filterWorkMode.set('ALL');
+    if (type === 'jobType') this.filterJobType.set('ALL');
+    if (type === 'experience') this.filterExperience.set('ALL');
+    this.currentPage.set(1);
+  }
+
+  hasActiveFilters(): boolean {
+    return !!this.searchQuery() || 
+           this.filterStatus() !== 'ALL' || 
+           !!this.filterLocation() || 
+           this.filterWorkMode() !== 'ALL' || 
+           this.filterJobType() !== 'ALL' || 
+           this.filterExperience() !== 'ALL' ||
+           this.filterMinApps() !== null ||
+           this.filterMaxApps() !== null;
   }
 
   getJobApplicationsCount(jobId: string): number {
@@ -352,9 +578,7 @@ export class RecruiterDashboard implements OnInit {
       this.jobService.deleteJob(jobId).subscribe({
         next: (res) => {
           if (res.success) {
-            alert('Job deleted successfully.');
-            this.loadMyJobs();
-            this.loadStats();
+            this.refreshAll();
           }
         },
         error: () => {
@@ -438,7 +662,10 @@ export class RecruiterDashboard implements OnInit {
     this.profileMessage.set(null);
     this.settingsMessage.set(null);
 
-    if (menu === 'create-job') {
+    if (menu === 'dashboard') {
+      // Always refresh everything when going back to dashboard
+      this.refreshAll();
+    } else if (menu === 'create-job') {
       this.resetJobForm();
     } else if (menu === 'all-jobs') {
       this.loadMyJobs();
@@ -513,9 +740,21 @@ export class RecruiterDashboard implements OnInit {
   }
 
   nextJobStep(): void {
-    if (this.jobStep() === 1 && (!this.jobForm.title.trim() || !this.jobForm.description.trim())) {
-      this.jobErrorMessage.set('Title and Description are required.');
-      return;
+    if (this.jobStep() === 1) {
+      if (!this.jobForm.title?.trim() || !this.jobForm.description?.trim()) {
+        this.jobErrorMessage.set('Job Title and Description are required in Step 1.');
+        return;
+      }
+    } else if (this.jobStep() === 2) {
+      if (!this.jobForm.requiredSkills?.trim()) {
+        this.jobErrorMessage.set('Required Skills are required in Step 2.');
+        return;
+      }
+    } else if (this.jobStep() === 3) {
+      if (!this.jobForm.location?.trim() || !this.jobForm.workMode) {
+        this.jobErrorMessage.set('Location and Work Mode are required in Step 3.');
+        return;
+      }
     }
     this.jobErrorMessage.set(null);
     this.jobStep.update(s => s + 1);
@@ -537,10 +776,16 @@ export class RecruiterDashboard implements OnInit {
       next: (res) => {
         this.isSubmittingJob.set(false);
         if (res.success) {
-          this.jobSuccessMessage.set(this.jobForm.id ? 'Job updated successfully!' : 'Job posted successfully!');
+          const isEdit = !!this.jobForm.id;
+          this.jobSuccessMessage.set(isEdit ? 'Job updated successfully!' : 'Job posted successfully!');
+          // Immediately refresh all data from backend so it persists across page reloads
+          this.refreshAll();
           setTimeout(() => {
             this.selectMenu('all-jobs');
-          }, 1200);
+            this.jobSuccessMessage.set(null);
+          }, 1500);
+        } else {
+          this.jobErrorMessage.set('Unexpected response from server. Please try again.');
         }
       },
       error: (err) => {
@@ -577,11 +822,11 @@ export class RecruiterDashboard implements OnInit {
           // Recalculate dashboard metrics
           this.calculateMetricsAndGraphs(this.allCompanyApplications());
 
-          this.jobSuccessMessage.set(this.jobForm.id ? 'Job updated successfully (Local fallback)!' : 'Job posted successfully (Local fallback)!');
+          this.jobSuccessMessage.set(this.jobForm.id ? 'Job updated successfully (offline)!' : 'Job posted successfully (offline)!');
           setTimeout(() => {
             this.selectMenu('all-jobs');
             this.jobSuccessMessage.set(null);
-          }, 1200);
+          }, 1500);
         } else {
           this.jobErrorMessage.set(errorMsg);
         }
@@ -613,8 +858,7 @@ export class RecruiterDashboard implements OnInit {
     if (confirm('Are you sure you want to close this job listing? Applicants will no longer be matched.')) {
       this.jobService.updateJobStatus(jobId, 'CLOSED').subscribe({
         next: () => {
-          this.loadMyJobs();
-          this.loadStats();
+          this.refreshAll();
         },
         error: () => {
           console.warn('Backend server down. Closing job locally...');
@@ -671,6 +915,22 @@ export class RecruiterDashboard implements OnInit {
 
   viewApplicantDetails(candidate: any): void {
     this.selectedApplicantDetail.set(candidate);
+    this.activeApplicantTab.set('ai-match');
+    this.selectedProfile.set(null);
+    if (candidate.studentId) {
+      this.isLoadingProfile.set(true);
+      this.studentProfileService.getProfileById(candidate.studentId).subscribe({
+        next: (res) => {
+          this.isLoadingProfile.set(false);
+          if (res.success && res.data) {
+            this.selectedProfile.set(res.data);
+          }
+        },
+        error: () => {
+          this.isLoadingProfile.set(false);
+        }
+      });
+    }
   }
 
   closeApplicantDetails(): void {
@@ -720,6 +980,41 @@ export class RecruiterDashboard implements OnInit {
     });
   }
 
+  quickShortlist(app: any): void {
+    this.applicationsService.updateStatus(app.id, 'SHORTLISTED', 'Quick shortlist from dashboard').subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.loadStats();
+          this.loadMyJobs();
+          alert(`${app.studentName} has been shortlisted.`);
+        }
+      },
+      error: () => {
+        // Fallback for mock status updates
+        app.status = 'SHORTLISTED';
+        alert(`${app.studentName} shortlisted (local fallback).`);
+      }
+    });
+  }
+
+  updateApplicationStatus(app: any, newStatus: string): void {
+    this.applicationsService.updateStatus(app.id, newStatus, `Status updated to ${newStatus} from application dashboard`).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.loadFilteredApplications();
+          this.loadStats();
+          this.loadMatchingCandidates();
+        }
+      },
+      error: () => {
+        app.status = newStatus;
+        this.loadFilteredApplications();
+        this.loadStats();
+        this.loadMatchingCandidates();
+      }
+    });
+  }
+
   // Application Filtering
   loadFilteredApplications(): void {
     const jobId = this.selectedJobIdForApplications();
@@ -737,6 +1032,7 @@ export class RecruiterDashboard implements OnInit {
             this.filteredApplications.set(res.data.filter((app: any) => {
               if (filter === 'NEW') return app.status === 'APPLIED';
               if (filter === 'UNDER_REVIEW') return app.status === 'VIEWED';
+              if (filter === 'SHORTLISTED') return app.status === 'SHORTLISTED';
               if (filter === 'INTERVIEW') return app.status === 'INTERVIEW';
               if (filter === 'REJECTED') return app.status === 'REJECTED';
               if (filter === 'SELECTED') return app.status === 'OFFER' || app.status === 'ACCEPTED';
@@ -749,6 +1045,10 @@ export class RecruiterDashboard implements OnInit {
         this.isLoadingCandidates.set(false);
       }
     });
+  }
+
+  countApplicationsByStatus(status: string): number {
+    return this.allCompanyApplications().filter(a => a.status === status).length;
   }
 
   onApplicationJobChange(): void {
@@ -812,6 +1112,52 @@ export class RecruiterDashboard implements OnInit {
       REJECTED: 'status-rejected',
     };
     return map[status] || '';
+  }
+
+  getScoreColorClass(score: number): string {
+    if (score >= 80) return 'score-high';
+    if (score >= 60) return 'score-mid';
+    return 'score-low';
+  }
+
+  getMinIndex(currentPage: number, pageSize: number, total: number): number {
+    return Math.min(currentPage * pageSize, total);
+  }
+
+  getMatchReasons(candidate: any): string[] {
+    const reasons: string[] = [];
+    if ((candidate.technicalFit || 0) >= 80) reasons.push('Strong Technical Fit');
+    if ((candidate.projectFit || 0) >= 80) reasons.push('Excellent Projects');
+    if ((candidate.experienceFit || 0) >= 80) reasons.push('Aligned Work History');
+    if ((candidate.educationFit || 0) >= 80) reasons.push('Meets Education Criteria');
+    
+    if (reasons.length === 0) {
+      if ((candidate.matchScore || 0) >= 70) {
+        reasons.push('High Overall Affinity');
+      } else {
+        reasons.push('Core Skill Alignment');
+      }
+    }
+    return reasons;
+  }
+
+  getMissingSkills(candidate: any): string[] {
+    const missing: string[] = [];
+    if ((candidate.technicalFit || 0) < 65) missing.push('Review Tech Stack gaps');
+    if ((candidate.projectFit || 0) < 65) missing.push('Review Project depth');
+    if ((candidate.experienceFit || 0) < 65) missing.push('Review Work Experience duration');
+    
+    if (missing.length === 0) {
+      missing.push('No critical gaps identified');
+    }
+    return missing;
+  }
+
+  getAverageSelectedJobMatchScore(): number {
+    const list = this.matchingCandidates();
+    if (!list || list.length === 0) return 0;
+    const sum = list.reduce((acc, c) => acc + (c.matchScore || 0), 0);
+    return Math.round(sum / list.length);
   }
 
   onLogout(): void {

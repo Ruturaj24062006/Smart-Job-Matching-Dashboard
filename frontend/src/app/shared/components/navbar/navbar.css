@@ -164,8 +164,8 @@
 }
 
 .unread-item {
-  background-color: rgba(var(--primary-rgb), 0.03);
-  border-left: 3px solid var(--primary-color);
+  background-color: rgba(144, 48, 27, 0.04);
+  border-left: 3px solid var(--primary-color, #90301B);
 }
 
 .item-header {
@@ -194,4 +194,117 @@
   line-height: 1.4;
   margin: 0;
 }
+
+/* User Profile Dropdown */
+.user-profile-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.profile-trigger-btn {
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  padding: 0.35rem 0.6rem;
+  border-radius: 30px;
+  transition: background-color 0.2s ease;
+}
+
+.profile-trigger-btn:hover {
+  background-color: rgba(144, 48, 27, 0.05);
+}
+
+.profile-avatar-sm {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: var(--accent-burgundy);
+  color: var(--bg-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+
+.profile-company-name-sm {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chevron-sm {
+  color: var(--text-light);
+}
+
+.profile-menu-dropdown {
+  position: absolute;
+  top: 48px;
+  right: 0;
+  width: 220px;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  background: var(--bg-white);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  z-index: 1000;
+  padding: 0.5rem 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dropdown-profile-header {
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.dropdown-company {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.dropdown-role {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.dropdown-divider {
+  height: 1px;
+  background-color: var(--border-light);
+  margin: 0.5rem 0;
+}
+
+.dropdown-menu-item {
+  padding: 0.6rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.dropdown-menu-item:hover {
+  background-color: rgba(144, 48, 27, 0.05);
+  color: var(--accent-burgundy);
+}
+
+.dropdown-menu-item.logout-item {
+  color: #ea4335;
+}
+
+.dropdown-menu-item.logout-item:hover {
+  background-color: rgba(234, 67, 53, 0.05);
+  color: #ea4335;
+}
+
 
