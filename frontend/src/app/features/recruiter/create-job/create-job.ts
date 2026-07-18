@@ -4,11 +4,11 @@ import { NgIf, NgFor } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { JobService, JobCreateDto } from '../../../core/services/job.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { Navbar } from '../../../shared/components/navbar/navbar';
+import { RecruiterProfileService, RecruiterProfileDto } from '../../../core/services/recruiter-profile.service';
 
 @Component({
   selector: 'app-create-job',
-  imports: [Navbar, NgIf, NgFor, FormsModule],
+  imports: [NgIf, NgFor, FormsModule],
   templateUrl: './create-job.html',
   styleUrl: './create-job.css'
 })
@@ -21,6 +21,7 @@ export class CreateJob implements OnInit {
   successMessage = signal<string | null>(null);
 
   aiPrompt = '';
+  profile: RecruiterProfileDto | null = null;
 
   job: JobCreateDto = {
     title: '',
@@ -52,10 +53,22 @@ export class CreateJob implements OnInit {
   constructor(
     private readonly jobService: JobService,
     private readonly authService: AuthService,
+    private readonly profileService: RecruiterProfileService,
     private readonly router: Router
   ) {}
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    this.profileService.getProfile().subscribe({
+      next: (res) => {
+        if (res.success && res.data) {
+          this.profile = res.data;
+        }
+      },
+      error: (err) => {
+        console.error('Error fetching profile in create job wizard:', err);
+      }
+    });
+  }
 
   addRequiredSkill(): void {
     const s = this.newRequiredSkill.trim();
@@ -141,6 +154,23 @@ export class CreateJob implements OnInit {
   }
 
   submitJob(): void {
+    // Validate company profile completeness before submitting
+    const missingFields: string[] = [];
+    if (!this.profile) {
+      missingFields.push('Company Name', 'Industry Sector', 'HQ Location', 'Recruiter Job Title', 'Company Description');
+    } else {
+      if (!this.profile.companyName?.trim()) missingFields.push('Company Name');
+      if (!this.profile.industry?.trim()) missingFields.push('Industry Sector');
+      if (!this.profile.location?.trim()) missingFields.push('HQ Location');
+      if (!this.profile.jobTitle?.trim()) missingFields.push('Recruiter Job Title');
+      if (!this.profile.description?.trim()) missingFields.push('Company Description');
+    }
+
+    if (missingFields.length > 0) {
+      this.errorMessage.set(`⚠️ Your company profile is incomplete. Please fill in the following missing field(s) under "Company Profile" before posting a job: ${missingFields.join(', ')}.`);
+      return;
+    }
+
     if (!this.job.title || !this.job.description || !this.job.jobType) {
       this.errorMessage.set('Title, Description, and Job Type are required.');
       return;
