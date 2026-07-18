@@ -13,7 +13,8 @@ A production-grade, AI-driven job matching and talent discovery platform designe
 
 ---
 
-## 🌐 Live Application Deployment
+## 🌐 Live Application & Demo Video
+- **Project Demo Video & Resources**: [Google Drive Folder](https://drive.google.com/drive/folders/1fae56KZ36IzFFKrRKQhli21psqtY6LKp?usp=sharing)
 - **Frontend Web App**: [https://nexus-frontend-gmd1.onrender.com](https://nexus-frontend-gmd1.onrender.com)
 - **Backend REST API**: [https://nexus-backend-gmd1.onrender.com](https://nexus-backend-gmd1.onrender.com)
 - **GitHub Repository**: [https://github.com/Ruturaj24062006/Smart-Job-Matching-Dashboard](https://github.com/Ruturaj24062006/Smart-Job-Matching-Dashboard)
