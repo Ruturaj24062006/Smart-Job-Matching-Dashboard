@@ -151,7 +151,7 @@ public class AdminController {
                         .id(j.getId())
                         .title(j.getTitle())
                         .companyName(j.getCompany() != null ? j.getCompany().getName() : "N/A")
-                        .workMode(j.getWorkMode() != null ? j.getWorkMode().name() : "N/A")
+                        .workMode(j.getWorkMode() != null ? j.getWorkMode() : "N/A")
                         .location(j.getLocation())
                         .status(j.getStatus() != null ? j.getStatus().name() : "N/A")
                         .createdAt(j.getCreatedAt())
