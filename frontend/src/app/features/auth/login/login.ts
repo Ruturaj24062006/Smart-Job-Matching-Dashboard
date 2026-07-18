@@ -40,8 +40,7 @@ export class Login implements OnInit {
       if (typeof window !== 'undefined' && (window as any).google) {
         clearInterval(checkGoogle);
         
-        // This Client ID should be set by the user based on their Google Cloud Console.
-        // It matches the configuration they are performing in Supabase Auth settings.
+        // This Client ID matches the configuration they are performing in Supabase Auth settings.
         const clientId = '562305543169-qgghq9tr4v4o0npsqg27sc6ndv7b0688.apps.googleusercontent.com';
         
         (window as any).google.accounts.id.initialize({
@@ -53,7 +52,13 @@ export class Login implements OnInit {
         if (btnContainer) {
           (window as any).google.accounts.id.renderButton(
             btnContainer,
-            { theme: 'outline', size: 'large' }
+            { 
+              theme: 'outline', 
+              size: 'large',
+              width: 320,
+              text: 'continue_with',
+              shape: 'rectangular'
+            }
           );
         }
       }
@@ -79,18 +84,6 @@ export class Login implements OnInit {
         this.errorMessage.set(err.error?.message || 'Google login failed.');
       }
     });
-  }
-
-  signInWithGoogle(): void {
-    const iframe = document.querySelector('#googleBtn iframe') as HTMLElement;
-    const divBtn = document.querySelector('#googleBtn div[role="button"]') as HTMLElement;
-    if (iframe) {
-      iframe.click();
-    } else if (divBtn) {
-      divBtn.click();
-    } else {
-      (window as any).google?.accounts?.id?.prompt();
-    }
   }
 
   onSubmit(): void {
@@ -138,22 +131,6 @@ export class Login implements OnInit {
     });
   }
 
-  onGoogleLogin(): void {
-    this.isLoading.set(true);
-    this.errorMessage.set(null);
-    setTimeout(() => {
-      const mockData = {
-        accessToken: 'mock_access_token_google',
-        refreshToken: 'mock_refresh_token_google',
-        email: 'ruturaj.ambure24@vit.edu',
-        role: 'ROLE_STUDENT',
-        userId: '00000000-0000-0000-0000-000000000000'
-      };
-      (this.authService as any).saveSession(mockData);
-      this.isLoading.set(false);
-      this.redirectBasedOnRole('ROLE_STUDENT');
-    }, 800);
-  }
 
   private redirectBasedOnRole(role: string): void {
     switch (role) {

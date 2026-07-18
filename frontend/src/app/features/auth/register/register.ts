@@ -26,8 +26,7 @@ export class Register {
       password: ['', [Validators.required, Validators.minLength(6)]],
       firstName: ['', [Validators.required]],
       lastName: ['', [Validators.required]],
-      companyName: [''],
-      jobTitle: ['']
+      companyName: ['']
     });
   }
 
@@ -39,24 +38,20 @@ export class Register {
     const firstName = this.registerForm.get('firstName');
     const lastName = this.registerForm.get('lastName');
     const companyName = this.registerForm.get('companyName');
-    const jobTitle = this.registerForm.get('jobTitle');
 
     if (role === 'ROLE_STUDENT') {
       firstName?.setValidators([Validators.required]);
       lastName?.setValidators([Validators.required]);
       companyName?.clearValidators();
-      jobTitle?.clearValidators();
     } else {
       firstName?.clearValidators();
       lastName?.clearValidators();
       companyName?.setValidators([Validators.required]);
-      jobTitle?.setValidators([Validators.required]);
     }
 
     firstName?.updateValueAndValidity();
     lastName?.updateValueAndValidity();
     companyName?.updateValueAndValidity();
-    jobTitle?.updateValueAndValidity();
   }
 
   onSubmit(): void {
@@ -81,7 +76,6 @@ export class Register {
       payload.lastName = formVal.lastName;
     } else {
       payload.companyName = formVal.companyName;
-      payload.jobTitle = formVal.jobTitle;
     }
 
     this.authService.register(payload).subscribe({

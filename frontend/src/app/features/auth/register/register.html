@@ -41,17 +41,11 @@
       </div>
 
       <!-- Dynamic Recruiter Fields -->
-      <div *ngIf="selectedRole() === 'ROLE_RECRUITER'" class="form-row-grid">
+      <div *ngIf="selectedRole() === 'ROLE_RECRUITER'">
         <div class="form-group" [ngClass]="{'has-error': registerForm.get('companyName')?.touched && registerForm.get('companyName')?.invalid}">
           <label for="companyName" class="form-label">Company Name</label>
           <input type="text" id="companyName" formControlName="companyName" placeholder="Acme Inc" class="form-input" autocomplete="organization">
-          <span *ngIf="registerForm.get('companyName')?.touched && registerForm.get('companyName')?.errors?.['required']" class="error-msg">Required</span>
-        </div>
-
-        <div class="form-group" [ngClass]="{'has-error': registerForm.get('jobTitle')?.touched && registerForm.get('jobTitle')?.invalid}">
-          <label for="jobTitle" class="form-label">Job Title</label>
-          <input type="text" id="jobTitle" formControlName="jobTitle" placeholder="Technical Recruiter" class="form-input" autocomplete="honorific-prefix">
-          <span *ngIf="registerForm.get('jobTitle')?.touched && registerForm.get('jobTitle')?.errors?.['required']" class="error-msg">Required</span>
+          <span *ngIf="registerForm.get('companyName')?.touched && registerForm.get('companyName')?.errors?.['required']" class="error-msg">Company Name is required</span>
         </div>
       </div>
 
