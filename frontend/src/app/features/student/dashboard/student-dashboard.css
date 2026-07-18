@@ -1703,201 +1703,328 @@
   background: #700000;
 }
 
-/* Full-Screen Dashboard Layout - Red & Cream Theme */
+/* Full-Screen Dashboard Layout - Enterprise SaaS Light Red & Cream Theme */
 .full-screen-dashboard-wrapper {
-  min-height: 100vh;
+  height: 100vh;
   width: 100vw;
   background-color: #faf6f0;
-  color: #1f2937;
+  color: #111827;
   margin: 0;
   padding: 0;
-  overflow-x: hidden;
+  overflow: hidden;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 .board-layout-grid {
-  display: grid;
-  grid-template-columns: 270px 1fr;
-  min-height: 100vh;
-  width: 100%;
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
 }
 
 @media (max-width: 992px) {
   .board-layout-grid {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    overflow-y: auto;
   }
 }
 
-/* Left Sidebar - Warm Cream Elegant Design */
+/* Left Sidebar - Premium Enterprise SaaS Layout */
 .board-sidebar {
+  width: 270px;
+  min-width: 270px;
   background: #ffffff;
-  border-right: 1px solid #e7e0d6;
-  padding: 1.5rem 1.25rem;
+  border-right: 1px solid #e5e7eb;
+  padding: 1.25rem 1rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 100vh;
-  position: sticky;
-  top: 0;
   height: 100vh;
   overflow-y: auto;
+  box-shadow: 1px 0 3px rgba(0, 0, 0, 0.02);
   z-index: 100;
 }
 
 .sidebar-top-group {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.25rem;
 }
 
-/* Professional NEXUS Brand Header */
+/* Brand Logo Header */
+.sidebar-brand-box {
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid #f3f4f6;
+  margin-bottom: 0.25rem;
+}
+
 .brand-logo-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #f0e9df;
+  gap: 0.6rem;
+}
+
+.brand-icon-shape {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #991b1b;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(153, 27, 27, 0.25);
 }
 
 .brand-nexus-txt {
-  font-family: 'Playfair Display', Georgia, serif;
-  font-size: 1.3rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   color: #111827;
 }
 
 .brand-sub-badge {
-  font-size: 0.65rem;
-  font-weight: 800;
-  color: #ffffff;
-  background: #991b1b;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
   padding: 0.15rem 0.45rem;
-  border-radius: 4px;
-  letter-spacing: 0.05em;
+  border-radius: 6px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Sidebar Menu Section & Typography */
+.sidebar-menu-section {
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar-section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.75rem;
-  font-weight: 800;
+  font-size: 0.68rem;
+  font-weight: 700;
   color: #9ca3af;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  margin-bottom: 0.6rem;
+  padding: 0 0.5rem;
+  margin-bottom: 0.4rem;
 }
 
 .icon-add-btn {
-  background: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  font-weight: 800;
-  cursor: pointer;
+  background: transparent;
+  color: #6b7280;
+  border: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
 .icon-add-btn:hover {
-  background: #991b1b;
-  color: #ffffff;
+  background: #f3f4f6;
+  color: #991b1b;
 }
 
+/* Nav Links & Job Boards Item Styling */
 .job-boards-list, .nav-links-list {
   list-style: none;
   padding: 0;
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.15rem;
 }
 
 .board-item, .nav-link-item {
-  padding: 0.6rem 0.85rem;
+  padding: 0.55rem 0.75rem;
   border-radius: 8px;
-  font-size: 0.88rem;
-  font-weight: 600;
+  font-size: 0.86rem;
+  font-weight: 500;
   color: #4b5563;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  transition: all 0.2s ease;
+  gap: 0.65rem;
+  position: relative;
+  transition: all 0.15s ease-in-out;
 }
 
-.board-bullet {
-  color: #9ca3af;
-  font-size: 1rem;
+.nav-svg-icon, .board-svg-icon {
+  width: 18px;
+  height: 18px;
+  color: #6b7280;
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+
+.board-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #d1d5db;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
 }
 
 .board-item:hover, .nav-link-item:hover {
-  background: #f5efe6;
+  background: #f9fafb;
   color: #111827;
 }
 
+.board-item:hover .nav-svg-icon,
+.nav-link-item:hover .nav-svg-icon,
+.board-item:hover .board-svg-icon {
+  color: #111827;
+}
+
+.board-item:hover .board-dot {
+  background: #991b1b;
+}
+
+/* Active State - Premium SaaS Pill */
 .board-item.active, .nav-link-item.active {
   background: #fef2f2;
   color: #991b1b;
-  font-weight: 700;
-  border: 1px solid #fca5a5;
+  font-weight: 600;
 }
 
-.board-item.active .board-bullet {
+.board-item.active .nav-svg-icon,
+.nav-link-item.active .nav-svg-icon,
+.board-item.active .board-svg-icon {
   color: #991b1b;
+}
+
+.board-item.active .board-dot {
+  background: #991b1b;
+  box-shadow: 0 0 0 2px #fecaca;
+}
+
+.saved-count-badge {
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
 }
 
 .create-new-board-btn {
-  padding: 0.5rem 0.85rem;
+  padding: 0.5rem 0.75rem;
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 600;
   color: #991b1b;
   cursor: pointer;
-  margin-top: 0.25rem;
-  transition: opacity 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+  margin-top: 0.2rem;
 }
 
 .create-new-board-btn:hover {
-  opacity: 0.8;
+  background: #fef2f2;
 }
 
-/* Sidebar Bottom Group */
+/* Bottom Pinned User Section */
 .sidebar-bottom-group {
   padding-top: 1rem;
-  border-top: 1px solid #f0e9df;
+  border-top: 1px solid #f3f4f6;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.user-profile-mini-card {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 0.65rem;
+  background: #fdfbf7;
+  border: 1px solid #e7e0d6;
+  border-radius: 10px;
+}
+
+.user-avatar-initial {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #8b0000;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.user-info-text {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.user-display-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-role-caption {
+  font-size: 0.7rem;
+  color: #6b7280;
 }
 
 .btn-signout-sidebar {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #dc2626;
-  padding: 0.65rem 1rem;
-  border-radius: 10px;
-  font-size: 0.88rem;
-  font-weight: 700;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  color: #4b5563;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   width: 100%;
 }
 
 .btn-signout-sidebar:hover {
-  background: #fee2e2;
+  background: #fef2f2;
+  color: #991b1b;
+  border-color: #fca5a5;
 }
 
-/* Main Content Area - Warm Light Theme */
+.signout-svg-icon {
+  width: 16px;
+  height: 16px;
+  color: currentColor;
+}
+
 .board-main-content {
+  flex: 1;
   padding: 2rem 2.5rem;
   background: #faf6f0;
-  min-height: 100vh;
+  height: 100vh;
+  overflow-y: auto;
 }
 
 .greeting-banner-card {

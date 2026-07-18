@@ -4,70 +4,141 @@
     <!-- LEFT SIDEBAR -->
     <aside class="board-sidebar animate-fade-in">
       <div class="sidebar-top-group">
+        
+        <!-- Brand Header -->
         <div class="sidebar-brand-box">
           <div class="brand-logo-row">
+            <div class="brand-icon-shape">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+                <polyline points="2 17 12 22 22 17"/>
+                <polyline points="2 12 12 17 22 12"/>
+              </svg>
+            </div>
             <span class="brand-nexus-txt">NEXUS</span>
             <span class="brand-sub-badge">JOB MATCH</span>
           </div>
         </div>
 
+        <!-- Main Navigation -->
         <div class="sidebar-menu-section">
           <ul class="nav-links-list">
             <li class="nav-link-item" [class.active]="activeTab() === 'recommendations'" (click)="changeTab('recommendations')">
-              <span class="nav-icon">📊</span> Dashboard
+              <svg class="nav-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="9" rx="1.5"/>
+                <rect x="14" y="3" width="7" height="5" rx="1.5"/>
+                <rect x="14" y="12" width="7" height="9" rx="1.5"/>
+                <rect x="3" y="16" width="7" height="5" rx="1.5"/>
+              </svg>
+              <span>Dashboard</span>
+            </li>
+            <li class="nav-link-item" (click)="openUploadModal()">
+              <svg class="nav-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <path d="M12 18v-6"/>
+                <path d="m9 15 3-3 3 3"/>
+              </svg>
+              <span>Upload Resume</span>
             </li>
           </ul>
         </div>
 
+        <!-- Job Boards Section -->
         <div class="sidebar-menu-section">
           <div class="sidebar-section-header">
-            <span>Job Boards</span>
-            <button type="button" class="icon-add-btn" (click)="openUploadModal()" title="Create new job board">+</button>
+            <span>JOB BOARDS</span>
+            <button type="button" class="icon-add-btn" (click)="openUploadModal()" title="Create new job board">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+            </button>
           </div>
 
           <ul class="job-boards-list">
             <li class="board-item" [class.active]="selectedJobBoard() === 'All Matches'" (click)="selectJobBoard('All Matches')">
-              <span class="board-bullet">•</span> All Matches
+              <svg class="board-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+              </svg>
+              <span>All Matches</span>
             </li>
             <li class="board-item" [class.active]="selectedJobBoard() === '.Net Developer'" (click)="selectJobBoard('.Net Developer')">
-              <span class="board-bullet">•</span> .Net Developer
+              <span class="board-dot"></span>
+              <span>.Net Developer</span>
             </li>
             <li class="board-item" [class.active]="selectedJobBoard() === 'Java Developer'" (click)="selectJobBoard('Java Developer')">
-              <span class="board-bullet">•</span> Java Developer
+              <span class="board-dot"></span>
+              <span>Java Developer</span>
             </li>
             <li class="board-item" [class.active]="selectedJobBoard() === 'Frontend Engineer'" (click)="selectJobBoard('Frontend Engineer')">
-              <span class="board-bullet">•</span> Frontend Engineer
+              <span class="board-dot"></span>
+              <span>Frontend Engineer</span>
             </li>
             <li class="board-item" [class.active]="selectedJobBoard() === 'AI Engineer'" (click)="selectJobBoard('AI Engineer')">
-              <span class="board-bullet">•</span> AI Engineer
+              <span class="board-dot"></span>
+              <span>AI Engineer</span>
             </li>
             <li class="create-new-board-btn" (click)="openUploadModal()">
-              + Create a new job board
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              <span>Create job board</span>
             </li>
           </ul>
         </div>
 
+        <!-- Secondary Navigation -->
         <div class="sidebar-menu-section">
+          <div class="sidebar-section-header">
+            <span>EXPLORE & SETTINGS</span>
+          </div>
           <ul class="nav-links-list">
             <li class="nav-link-item" [class.active]="activeTab() === 'discover'" (click)="changeTab('discover')">
-              <span class="nav-icon">📜</span> History / Discover
+              <svg class="nav-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
+              </svg>
+              <span>History / Discover</span>
             </li>
             <li class="nav-link-item" (click)="changeTab('recommendations')">
-              <span class="nav-icon">🔖</span> Saved Jobs ({{ savedJobIds().size }})
+              <svg class="nav-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
+              </svg>
+              <span>Saved Jobs</span>
+              <span class="saved-count-badge" *ngIf="savedJobIds().size > 0">{{ savedJobIds().size }}</span>
             </li>
             <li class="nav-link-item" (click)="router.navigate(['/student/profile-review'])">
-              <span class="nav-icon">✏️</span> Edit Job Board
-            </li>
-            <li class="nav-link-item" (click)="openUploadModal()">
-              <span class="nav-icon">📄</span> Upload Resume
+              <svg class="nav-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 20h9"/>
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+              </svg>
+              <span>Edit Job Board</span>
             </li>
           </ul>
         </div>
       </div>
 
+      <!-- Bottom Pinned User Card & Logout -->
       <div class="sidebar-bottom-group">
-        <button type="button" class="btn-signout-sidebar" (click)="onLogout()">
-          <span class="signout-icon">🚪</span> Sign Out
+        <div class="user-profile-mini-card">
+          <div class="user-avatar-initial">
+            {{ getStudentName().charAt(0) }}
+          </div>
+          <div class="user-info-text">
+            <span class="user-display-name">{{ getStudentName() }}</span>
+            <span class="user-role-caption">Student Account</span>
+          </div>
+        </div>
+        <button type="button" class="btn-signout-sidebar" (click)="onLogout()" title="Sign Out">
+          <svg class="signout-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          <span>Sign Out</span>
         </button>
       </div>
     </aside>
@@ -871,4 +942,3 @@
   </div>
 </div>
 
-<app-footer></app-footer>
