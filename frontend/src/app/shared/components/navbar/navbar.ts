@@ -103,6 +103,11 @@ export class Navbar implements OnInit {
     return this.authService.isAuthenticated();
   }
 
+  isStudent(): boolean {
+    const user = this.authService.currentUser();
+    return user?.role === 'ROLE_STUDENT';
+  }
+
   getDashboardLink(): string {
     const user = this.authService.currentUser();
     if (!user) return '/';
