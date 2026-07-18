@@ -1,277 +1,645 @@
-<div class="auth-wrapper onboarding-layout">
-  <div class="onboarding-container" style="max-width: 900px;">
-    
-    <div class="onboarding-header">
-      <div class="brand-logo"><a href="/">NEXUS</a></div>
-      <h2 class="auth-title">Verify Extracted Profile</h2>
-      <p class="auth-subtitle">AI has populated your details. Please review, fix errors, and fill missing fields.</p>
-    </div>
+<div class="profile-page-root">
 
-    <!-- Error/Success Banners -->
-    <div *ngIf="errorMessage()" class="alert alert-error animate-fade-in">
-      {{ errorMessage() }}
-    </div>
-    <div *ngIf="successMessage()" class="alert alert-success animate-fade-in">
-      {{ successMessage() }}
-    </div>
+  <!-- ── Sidebar Navigation ──────────────────────────────────────────── -->
+  <aside class="profile-sidebar">
+    <div class="profile-sidebar-top">
+      <!-- Back to Dashboard -->
+      <button class="back-btn" (click)="router.navigate(['/student/dashboard'])">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+        Dashboard
+      </button>
 
-    <div *ngIf="isLoading()" class="loading-state animate-fade-in" style="min-height: 250px;">
-      <div class="loading-spinner" style="width: 50px; height: 50px; border-width: 3px;"></div>
-      <h3 class="loading-title" style="margin-top: 1rem; font-size: 1.15rem;">Saving details and ranking matches...</h3>
-    </div>
-
-    <form *ngIf="!isLoading()" (ngSubmit)="onSubmit()" class="review-form animate-fade-in">
-      
-      <!-- CARD 1: Personal Information -->
-      <div class="review-card glass-card">
-        <div class="card-header-row">
-          <h3 class="card-title">Personal Information</h3>
-          <span *ngIf="hasField(profileData().firstName) && hasField(profileData().lastName) && hasField(profileData().githubUrl)" class="badge-verified">✓ Extracted</span>
-          <span *ngIf="!hasField(profileData().firstName) || !hasField(profileData().lastName) || !hasField(profileData().githubUrl)" class="badge-incomplete">⚠ Incomplete</span>
-        </div>
-
-        <div class="form-row-grid">
-          <div class="form-group">
-            <label class="form-label">First Name *</label>
-            <input type="text" [(ngModel)]="profileData().firstName" name="firstName" class="form-input" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Last Name *</label>
-            <input type="text" [(ngModel)]="profileData().lastName" name="lastName" class="form-input" required>
-          </div>
-        </div>
-
-        <div class="form-row-grid">
-          <div class="form-group">
-            <label class="form-label">GitHub URL</label>
-            <input type="url" [(ngModel)]="profileData().githubUrl" name="githubUrl" class="form-input" placeholder="https://github.com/username">
-          </div>
-          <div class="form-group">
-            <label class="form-label">LinkedIn URL</label>
-            <input type="url" [(ngModel)]="profileData().linkedinUrl" name="linkedinUrl" class="form-input" placeholder="https://linkedin.com/in/username">
-          </div>
-        </div>
-
-        <div class="form-row-grid">
-          <div class="form-group">
-            <label class="form-label">Portfolio URL</label>
-            <input type="url" [(ngModel)]="profileData().portfolioUrl" name="portfolioUrl" class="form-input" placeholder="https://myportfolio.com">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Known Languages (comma-separated)</label>
-            <input type="text" [(ngModel)]="profileData().languages" name="languages" class="form-input" placeholder="English, Spanish, Hindi">
-          </div>
+      <!-- Avatar & Name -->
+      <div class="profile-avatar-block">
+        <div class="profile-avatar-circle">{{ avatarInitial() }}</div>
+        <div class="profile-avatar-info">
+          <h2 class="profile-display-name">{{ firstName || 'Student' }} {{ lastName }}</h2>
+          <p class="profile-email-badge">{{ email }}</p>
         </div>
       </div>
 
-      <!-- CARD 2: Education -->
-      <div class="review-card glass-card">
-        <div class="card-header-row">
-          <h3 class="card-title">Education</h3>
-          <span *ngIf="hasField(profileData().education)" class="badge-verified">✓ Extracted ({{ profileData().education.length }})</span>
-          <span *ngIf="!hasField(profileData().education)" class="badge-incomplete">⚠ Empty</span>
+      <!-- Completion ring placeholder -->
+      <div class="completion-bar-wrap">
+        <div class="completion-bar-label">
+          <span>Profile Strength</span>
+          <span class="completion-pct">{{ computeCompletionPct() }}%</span>
+        </div>
+        <div class="completion-track">
+          <div class="completion-fill" [style.width.%]="computeCompletionPct()"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section Nav Links -->
+    <nav class="profile-nav-links">
+      <button *ngFor="let s of sections"
+              class="profile-nav-btn"
+              [class.active]="activeSection() === s.id"
+              (click)="setSection(s.id)">
+        <span class="pnav-icon">{{ s.icon }}</span>
+        <span class="pnav-label">{{ s.label }}</span>
+      </button>
+    </nav>
+
+    <!-- Save Button (pinned) -->
+    <div class="sidebar-save-area">
+      <button class="btn-save-profile" (click)="saveProfile()" [disabled]="isSaving()">
+        <span *ngIf="!isSaving()">💾 Save Profile</span>
+        <span *ngIf="isSaving()">Saving...</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ── Main Content ─────────────────────────────────────────────────── -->
+  <main class="profile-main">
+
+    <!-- Loading state -->
+    <div *ngIf="isLoading()" class="profile-loader-screen">
+      <div class="profile-spinner"></div>
+      <p>Loading your profile...</p>
+    </div>
+
+    <div *ngIf="!isLoading()">
+      <!-- Toast Messages -->
+      <div class="toast toast-success animate-fade-in" *ngIf="successMessage()">
+        ✅ {{ successMessage() }}
+      </div>
+      <div class="toast toast-error animate-fade-in" *ngIf="errorMessage()">
+        ❌ {{ errorMessage() }}
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- SECTION: Personal Information -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <section class="profile-section" *ngIf="activeSection() === 'personal'">
+        <div class="section-header">
+          <div class="section-header-icon">👤</div>
+          <div>
+            <h2 class="section-title">Personal Information</h2>
+            <p class="section-subtitle">Your basic profile details visible to recruiters</p>
+          </div>
         </div>
 
-        <div *ngFor="let edu of profileData().education; let idx = index" class="list-item-block">
-          <div class="item-header-row">
-            <h4 class="item-sub-title">Institution #{{ idx + 1 }}</h4>
-            <button type="button" (click)="removeEducation(idx)" class="btn-delete-item">Remove</button>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">First Name *</label>
+            <input class="form-input" type="text" [(ngModel)]="firstName" placeholder="e.g. Arjun">
           </div>
-          
-          <div class="form-row-grid">
-            <div class="form-group">
-              <label class="form-label">University / College *</label>
-              <input type="text" [(ngModel)]="edu.institution" name="edu_inst_{{idx}}" class="form-input" required>
+          <div class="form-group">
+            <label class="form-label">Last Name</label>
+            <input class="form-input" type="text" [(ngModel)]="lastName" placeholder="e.g. Sharma">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email <span class="readonly-badge">Read-only</span></label>
+            <input class="form-input form-input-readonly" type="email" [value]="email" readonly>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone Number</label>
+            <input class="form-input" type="tel" [(ngModel)]="phone" placeholder="+91 9876543210">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date of Birth</label>
+            <input class="form-input" type="date" [(ngModel)]="dateOfBirth">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Gender</label>
+            <select class="form-select" [(ngModel)]="gender">
+              <option value="">Select gender</option>
+              <option *ngFor="let g of genderOptions" [value]="g">{{ g }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">City</label>
+            <input class="form-input" type="text" [(ngModel)]="city" placeholder="e.g. Bangalore">
+          </div>
+          <div class="form-group">
+            <label class="form-label">State</label>
+            <input class="form-input" type="text" [(ngModel)]="state" placeholder="e.g. Karnataka">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Country</label>
+            <input class="form-input" type="text" [(ngModel)]="country" placeholder="e.g. India">
+          </div>
+        </div>
+
+        <div class="section-divider">Online Presence</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">
+              <svg class="link-icon" viewBox="0 0 24 24" fill="#0a66c2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+              LinkedIn URL
+            </label>
+            <input class="form-input" type="url" [(ngModel)]="linkedinUrl" placeholder="https://linkedin.com/in/yourname">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <svg class="link-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+              GitHub URL
+            </label>
+            <input class="form-input" type="url" [(ngModel)]="githubUrl" placeholder="https://github.com/yourhandle">
+          </div>
+          <div class="form-group form-group-full">
+            <label class="form-label">🌐 Portfolio Website</label>
+            <input class="form-input" type="url" [(ngModel)]="portfolioUrl" placeholder="https://yourportfolio.com">
+          </div>
+        </div>
+
+        <div class="section-actions">
+          <button class="btn-save-section" (click)="saveProfile()" [disabled]="isSaving()">
+            {{ isSaving() ? 'Saving...' : 'Save Personal Info' }}
+          </button>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- SECTION: Professional Information -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <section class="profile-section" *ngIf="activeSection() === 'professional'">
+        <div class="section-header">
+          <div class="section-header-icon">💼</div>
+          <div>
+            <h2 class="section-title">Professional Information</h2>
+            <p class="section-subtitle">Job preferences used to match and rank opportunities</p>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group form-group-full">
+            <label class="form-label">Target Role / Job Title *</label>
+            <input class="form-input" type="text" [(ngModel)]="targetRole" placeholder="e.g. Full Stack Developer, ML Engineer">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Years of Experience</label>
+            <input class="form-input" type="text" [(ngModel)]="yearsExperience" placeholder="e.g. 2 years, Fresher">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Preferred Job Location</label>
+            <input class="form-input" type="text" [(ngModel)]="preferredCity" placeholder="e.g. Bangalore, Remote">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Preferred Work Mode</label>
+            <select class="form-select" [(ngModel)]="workMode">
+              <option *ngFor="let m of workModes" [value]="m">{{ m }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Expected Salary (optional)</label>
+            <input class="form-input" type="text" [(ngModel)]="expectedSalary" placeholder="e.g. ₹8-12 LPA, $80k">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Notice Period</label>
+            <input class="form-input" type="text" [(ngModel)]="noticePeriod" placeholder="e.g. Immediate, 30 days, 60 days">
+          </div>
+          <div class="form-group form-group-full">
+            <label class="form-label">Professional Bio / Summary</label>
+            <textarea class="form-textarea" [(ngModel)]="bio" rows="4"
+              placeholder="A brief summary about your professional background, key skills, and what you're looking for in your next role..."></textarea>
+          </div>
+        </div>
+
+        <div class="section-actions">
+          <button class="btn-save-section" (click)="saveProfile()" [disabled]="isSaving()">
+            {{ isSaving() ? 'Saving...' : 'Save Professional Info' }}
+          </button>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- SECTION: Skills -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <section class="profile-section" *ngIf="activeSection() === 'skills'">
+        <div class="section-header">
+          <div class="section-header-icon">⚡</div>
+          <div>
+            <h2 class="section-title">Skills</h2>
+            <p class="section-subtitle">Technical skills are used by our AI for job matching</p>
+          </div>
+        </div>
+
+        <!-- Technical Skills -->
+        <div class="subsection-header">
+          <span>Technical Skills</span>
+          <button class="btn-add-item" (click)="addTechSkill()">+ Add Skill</button>
+        </div>
+
+        <div class="skills-list">
+          <div *ngFor="let skill of technicalSkills; let i = index" class="skill-row">
+            <input class="form-input skill-name-input" type="text"
+                   [(ngModel)]="skill.name" placeholder="e.g. React, Python, Docker">
+            <select class="form-select skill-level-select" [(ngModel)]="skill.proficiencyLevel">
+              <option *ngFor="let lvl of proficiencyLevels" [value]="lvl">{{ lvl }}</option>
+            </select>
+            <button class="btn-remove-item" (click)="removeTechSkill(i)" title="Remove">✕</button>
+          </div>
+          <div *ngIf="technicalSkills.length === 0" class="empty-list-hint">
+            No skills added yet. Click "+ Add Skill" to begin.
+          </div>
+        </div>
+
+        <!-- Soft Skills -->
+        <div class="subsection-header" style="margin-top:2rem">
+          <span>Soft Skills</span>
+        </div>
+        <div class="soft-skills-input-row">
+          <input class="form-input" type="text" [(ngModel)]="newSoftSkill"
+                 placeholder="e.g. Leadership, Communication"
+                 (keyup.enter)="addSoftSkill()">
+          <button class="btn-add-item" (click)="addSoftSkill()">+ Add</button>
+        </div>
+        <div class="soft-skills-chips">
+          <span *ngFor="let s of softSkills; let i = index" class="skill-chip">
+            {{ s }}
+            <button class="chip-remove" (click)="removeSoftSkill(i)">×</button>
+          </span>
+          <span *ngIf="softSkills.length === 0" class="empty-list-hint">No soft skills added.</span>
+        </div>
+
+        <!-- Languages -->
+        <div class="subsection-header" style="margin-top:2rem">
+          <span>Languages Known</span>
+        </div>
+        <input class="form-input" type="text" [(ngModel)]="languages"
+               placeholder="e.g. English, Hindi, Tamil (comma separated)">
+
+        <div class="section-actions">
+          <button class="btn-save-section" (click)="saveProfile()" [disabled]="isSaving()">
+            {{ isSaving() ? 'Saving...' : 'Save Skills' }}
+          </button>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- SECTION: Education -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <section class="profile-section" *ngIf="activeSection() === 'education'">
+        <div class="section-header">
+          <div class="section-header-icon">🎓</div>
+          <div>
+            <h2 class="section-title">Education</h2>
+            <p class="section-subtitle">Degrees and academic qualifications</p>
+          </div>
+        </div>
+
+        <div *ngFor="let edu of education; let i = index" class="card-entry">
+          <div class="card-entry-header">
+            <span class="card-entry-num">Education {{ i + 1 }}</span>
+            <button class="btn-remove-card" (click)="removeEducation(i)">✕ Remove</button>
+          </div>
+          <div class="form-grid">
+            <div class="form-group form-group-full">
+              <label class="form-label">College / University *</label>
+              <input class="form-input" type="text" [(ngModel)]="edu.institution" placeholder="e.g. IIT Bombay, BITS Pilani">
             </div>
             <div class="form-group">
               <label class="form-label">Degree *</label>
-              <input type="text" [(ngModel)]="edu.degree" name="edu_deg_{{idx}}" class="form-input" placeholder="B.Tech, B.S., M.S." required>
-            </div>
-          </div>
-
-          <div class="form-row-grid">
-            <div class="form-group">
-              <label class="form-label">Field of Study *</label>
-              <input type="text" [(ngModel)]="edu.fieldOfStudy" name="edu_field_{{idx}}" class="form-input" placeholder="Computer Science" required>
+              <input class="form-input" type="text" [(ngModel)]="edu.degree" placeholder="e.g. B.Tech, M.Sc">
             </div>
             <div class="form-group">
-              <label class="form-label">CGPA / GPA</label>
-              <input type="number" step="0.01" [(ngModel)]="edu.gpa" name="edu_gpa_{{idx}}" class="form-input" placeholder="9.5 or 3.8">
+              <label class="form-label">Branch / Field of Study</label>
+              <input class="form-input" type="text" [(ngModel)]="edu.fieldOfStudy" placeholder="e.g. Computer Science">
             </div>
-          </div>
-
-          <div class="form-row-grid">
             <div class="form-group">
               <label class="form-label">Start Date</label>
-              <input type="date" [(ngModel)]="edu.startDate" name="edu_start_{{idx}}" class="form-input">
+              <input class="form-input" type="date" [(ngModel)]="edu.startDate">
             </div>
             <div class="form-group">
-              <label class="form-label">End Date (Expected)</label>
-              <input type="date" [(ngModel)]="edu.endDate" name="edu_end_{{idx}}" class="form-input">
+              <label class="form-label">Graduation / End Date</label>
+              <input class="form-input" type="date" [(ngModel)]="edu.endDate">
+            </div>
+            <div class="form-group">
+              <label class="form-label">CGPA / Percentage</label>
+              <input class="form-input" type="number" [(ngModel)]="edu.gpa" step="0.01" placeholder="e.g. 8.5 or 85%">
             </div>
           </div>
         </div>
 
-        <button type="button" (click)="addEducation()" class="btn btn-secondary btn-sm add-item-btn">+ Add Education</button>
-      </div>
+        <button class="btn-add-card" (click)="addEducation()">+ Add Education</button>
 
-      <!-- CARD 3: Technical Skills -->
-      <div class="review-card glass-card">
-        <div class="card-header-row">
-          <h3 class="card-title">Technical Skills</h3>
-          <span *ngIf="hasField(profileData().skills)" class="badge-verified">✓ Extracted ({{ profileData().skills.length }})</span>
-          <span *ngIf="!hasField(profileData().skills)" class="badge-incomplete">⚠ Empty</span>
+        <div class="section-actions">
+          <button class="btn-save-section" (click)="saveProfile()" [disabled]="isSaving()">
+            {{ isSaving() ? 'Saving...' : 'Save Education' }}
+          </button>
         </div>
+      </section>
 
-        <div class="skills-input-list">
-          <div *ngFor="let skill of profileData().skills; let idx = index" class="skill-pill-input">
-            <input type="text" [(ngModel)]="skill.name" name="skill_name_{{idx}}" class="skill-name-field" placeholder="Java" required>
-            <select [(ngModel)]="skill.proficiencyLevel" name="skill_level_{{idx}}" class="skill-level-select">
-              <option value="BEGINNER">Beginner</option>
-              <option value="INTERMEDIATE">Intermediate</option>
-              <option value="ADVANCED">Advanced</option>
-              <option value="EXPERT">Expert</option>
-            </select>
-            <button type="button" (click)="removeSkill(idx)" class="skill-delete-x">×</button>
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- SECTION: Experience -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <section class="profile-section" *ngIf="activeSection() === 'experience'">
+        <div class="section-header">
+          <div class="section-header-icon">🏢</div>
+          <div>
+            <h2 class="section-title">Work Experience</h2>
+            <p class="section-subtitle">Internships, full-time, freelance, and other roles</p>
           </div>
         </div>
 
-        <button type="button" (click)="addSkill()" class="btn btn-secondary btn-sm add-item-btn" style="margin-top: 1rem;">+ Add Skill</button>
-      </div>
-
-      <!-- CARD 4: Work Experience -->
-      <div class="review-card glass-card">
-        <div class="card-header-row">
-          <h3 class="card-title">Work Experience</h3>
-          <span *ngIf="hasField(profileData().experience)" class="badge-verified">✓ Extracted ({{ profileData().experience.length }})</span>
-          <span *ngIf="!hasField(profileData().experience)" class="badge-incomplete">⚠ Empty</span>
-        </div>
-
-        <div *ngFor="let exp of profileData().experience; let idx = index" class="list-item-block">
-          <div class="item-header-row">
-            <h4 class="item-sub-title">Role #{{ idx + 1 }}</h4>
-            <button type="button" (click)="removeExperience(idx)" class="btn-delete-item">Remove</button>
+        <div *ngFor="let exp of experience; let i = index" class="card-entry">
+          <div class="card-entry-header">
+            <span class="card-entry-num">{{ exp.jobTitle || 'Experience ' + (i + 1) }}</span>
+            <button class="btn-remove-card" (click)="removeExperience(i)">✕ Remove</button>
           </div>
-          
-          <div class="form-row-grid">
+          <div class="form-grid">
             <div class="form-group">
               <label class="form-label">Company Name *</label>
-              <input type="text" [(ngModel)]="exp.companyName" name="exp_comp_{{idx}}" class="form-input" required>
+              <input class="form-input" type="text" [(ngModel)]="exp.companyName" placeholder="e.g. Google, Infosys">
             </div>
             <div class="form-group">
               <label class="form-label">Job Title *</label>
-              <input type="text" [(ngModel)]="exp.jobTitle" name="exp_title_{{idx}}" class="form-input" required>
+              <input class="form-input" type="text" [(ngModel)]="exp.jobTitle" placeholder="e.g. Software Engineer">
             </div>
-          </div>
-
-          <div class="form-row-grid">
             <div class="form-group">
               <label class="form-label">Start Date</label>
-              <input type="date" [(ngModel)]="exp.startDate" name="exp_start_{{idx}}" class="form-input">
+              <input class="form-input" type="date" [(ngModel)]="exp.startDate">
             </div>
             <div class="form-group">
-              <label class="form-label">End Date</label>
-              <input type="date" [(ngModel)]="exp.endDate" name="exp_end_{{idx}}" class="form-input">
+              <label class="form-label">End Date (leave blank if current)</label>
+              <input class="form-input" type="date" [(ngModel)]="exp.endDate">
+            </div>
+            <div class="form-group form-group-full">
+              <label class="form-label">Description / Responsibilities</label>
+              <textarea class="form-textarea" [(ngModel)]="exp.description" rows="3"
+                placeholder="Key responsibilities, achievements, technologies used..."></textarea>
             </div>
           </div>
+        </div>
 
-          <div class="form-group">
-            <label class="form-label">Responsibilities & Description</label>
-            <textarea [(ngModel)]="exp.description" name="exp_desc_{{idx}}" class="form-input" rows="3" placeholder="Detail your accomplishments, key stacks used, etc."></textarea>
+        <button class="btn-add-card" (click)="addExperience()">+ Add Experience</button>
+
+        <div class="section-actions">
+          <button class="btn-save-section" (click)="saveProfile()" [disabled]="isSaving()">
+            {{ isSaving() ? 'Saving...' : 'Save Experience' }}
+          </button>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- SECTION: Projects -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <section class="profile-section" *ngIf="activeSection() === 'projects'">
+        <div class="section-header">
+          <div class="section-header-icon">🚀</div>
+          <div>
+            <h2 class="section-title">Projects</h2>
+            <p class="section-subtitle">Personal, academic, and open-source projects</p>
           </div>
         </div>
 
-        <button type="button" (click)="addExperience()" class="btn btn-secondary btn-sm add-item-btn">+ Add Experience</button>
-      </div>
-
-      <!-- CARD 5: Projects -->
-      <div class="review-card glass-card">
-        <div class="card-header-row">
-          <h3 class="card-title">Projects</h3>
-          <span *ngIf="hasField(profileData().projects)" class="badge-verified">✓ Extracted ({{ profileData().projects.length }})</span>
-          <span *ngIf="!hasField(profileData().projects)" class="badge-incomplete">⚠ Empty</span>
-        </div>
-
-        <div *ngFor="let proj of profileData().projects; let idx = index" class="list-item-block">
-          <div class="item-header-row">
-            <h4 class="item-sub-title">Project #{{ idx + 1 }}</h4>
-            <button type="button" (click)="removeProject(idx)" class="btn-delete-item">Remove</button>
+        <div *ngFor="let proj of projects; let i = index" class="card-entry">
+          <div class="card-entry-header">
+            <span class="card-entry-num">{{ proj.name || 'Project ' + (i + 1) }}</span>
+            <button class="btn-remove-card" (click)="removeProject(i)">✕ Remove</button>
           </div>
-          
-          <div class="form-row-grid">
+          <div class="form-grid">
             <div class="form-group">
               <label class="form-label">Project Name *</label>
-              <input type="text" [(ngModel)]="proj.name" name="proj_name_{{idx}}" class="form-input" required>
+              <input class="form-input" type="text" [(ngModel)]="proj.name" placeholder="e.g. Job Match Dashboard">
             </div>
             <div class="form-group">
-              <label class="form-label">Technologies (comma-separated)</label>
-              <input type="text" [(ngModel)]="proj.technologies" name="proj_tech_{{idx}}" class="form-input" placeholder="Angular, NestJS, MongoDB">
+              <label class="form-label">Technologies Used</label>
+              <input class="form-input" type="text" [(ngModel)]="proj.technologies" placeholder="e.g. Angular, Spring Boot, PostgreSQL">
+            </div>
+            <div class="form-group">
+              <label class="form-label">GitHub Repo Link</label>
+              <input class="form-input" type="url" [(ngModel)]="proj.repoUrl" placeholder="https://github.com/...">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Live Demo Link</label>
+              <input class="form-input" type="url" [(ngModel)]="proj.liveUrl" placeholder="https://yourproject.vercel.app">
+            </div>
+            <div class="form-group form-group-full">
+              <label class="form-label">Description</label>
+              <textarea class="form-textarea" [(ngModel)]="proj.description" rows="3"
+                placeholder="What does the project do? What problem does it solve?"></textarea>
             </div>
           </div>
+        </div>
 
-          <div class="form-group">
-            <label class="form-label">GitHub Repository Link</label>
-            <input type="url" [(ngModel)]="proj.repoUrl" name="proj_repo_{{idx}}" class="form-input" placeholder="https://github.com/username/project">
-          </div>
+        <button class="btn-add-card" (click)="addProject()">+ Add Project</button>
 
-          <div class="form-group">
-            <label class="form-label">Description</label>
-            <textarea [(ngModel)]="proj.description" name="proj_desc_{{idx}}" class="form-input" rows="2" placeholder="Brief explanation of what the project does."></textarea>
+        <div class="section-actions">
+          <button class="btn-save-section" (click)="saveProfile()" [disabled]="isSaving()">
+            {{ isSaving() ? 'Saving...' : 'Save Projects' }}
+          </button>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- SECTION: Certifications -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <section class="profile-section" *ngIf="activeSection() === 'certifications'">
+        <div class="section-header">
+          <div class="section-header-icon">🏆</div>
+          <div>
+            <h2 class="section-title">Certifications</h2>
+            <p class="section-subtitle">Professional certifications and online course completions</p>
           </div>
         </div>
 
-        <button type="button" (click)="addProject()" class="btn btn-secondary btn-sm add-item-btn">+ Add Project</button>
+        <div *ngFor="let cert of certifications; let i = index" class="card-entry">
+          <div class="card-entry-header">
+            <span class="card-entry-num">{{ cert.name || 'Certification ' + (i + 1) }}</span>
+            <button class="btn-remove-card" (click)="removeCertification(i)">✕ Remove</button>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Certification Name *</label>
+              <input class="form-input" type="text" [(ngModel)]="cert.name" placeholder="e.g. AWS Certified Developer">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Issuing Organization</label>
+              <input class="form-input" type="text" [(ngModel)]="cert.issuingOrganization" placeholder="e.g. Amazon Web Services">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Issue Date</label>
+              <input class="form-input" type="date" [(ngModel)]="cert.issueDate">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Expiration Date</label>
+              <input class="form-input" type="date" [(ngModel)]="cert.expirationDate">
+            </div>
+            <div class="form-group form-group-full">
+              <label class="form-label">Credential / Certificate Link</label>
+              <input class="form-input" type="url" [(ngModel)]="cert.credentialUrl" placeholder="https://credential.link/...">
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-add-card" (click)="addCertification()">+ Add Certification</button>
+
+        <div class="section-actions">
+          <button class="btn-save-section" (click)="saveProfile()" [disabled]="isSaving()">
+            {{ isSaving() ? 'Saving...' : 'Save Certifications' }}
+          </button>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- SECTION: Resume -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <section class="profile-section" *ngIf="activeSection() === 'resume'">
+        <div class="section-header">
+          <div class="section-header-icon">📄</div>
+          <div>
+            <h2 class="section-title">Resume</h2>
+            <p class="section-subtitle">Your AI-parsed resume powers all job matching</p>
+          </div>
+        </div>
+
+        <!-- Current Resume Card -->
+        <div *ngIf="resumeId()" class="resume-card">
+          <div class="resume-card-icon">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="1.8" stroke-linecap="round">
+              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10 9 9 9 8 9"/>
+            </svg>
+          </div>
+          <div class="resume-card-info">
+            <h3 class="resume-file-name">Current Resume</h3>
+            <p class="resume-meta">
+              <span class="resume-status-badge" [class.status-success]="resumeStatus() === 'SUCCESS'" [class.status-processing]="resumeStatus() === 'PROCESSING'" [class.status-failed]="resumeStatus() === 'FAILED'">
+                {{ resumeStatus() === 'SUCCESS' ? '✓ Parsed' : resumeStatus() === 'PROCESSING' ? '⏳ Processing...' : resumeStatus() === 'FAILED' ? '✗ Parse Failed' : resumeStatus() }}
+              </span>
+              <span *ngIf="resumeUploadedAt()">• Uploaded {{ resumeUploadedAt() | slice:0:10 }}</span>
+            </p>
+          </div>
+        </div>
+
+        <div *ngIf="!resumeId()" class="empty-resume-hint">
+          <p>No resume uploaded yet. Upload your PDF resume below to enable AI-powered job matching.</p>
+        </div>
+
+        <!-- Upload New Resume -->
+        <div class="resume-upload-cta">
+          <button class="btn-upload-resume" (click)="openUploadModal()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            {{ resumeId() ? 'Upload New Resume' : 'Upload Resume' }}
+          </button>
+          <p class="upload-hint">PDF only · Max 10 MB · Text-based PDF required (not scanned images)</p>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- SECTION: Account Settings -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <section class="profile-section" *ngIf="activeSection() === 'account'">
+        <div class="section-header">
+          <div class="section-header-icon">⚙️</div>
+          <div>
+            <h2 class="section-title">Account Settings</h2>
+            <p class="section-subtitle">Manage your account security and preferences</p>
+          </div>
+        </div>
+
+        <div class="account-actions-grid">
+          <div class="account-action-card" (click)="onChangePassword()">
+            <div class="account-action-icon blue-icon">🔑</div>
+            <div class="account-action-info">
+              <h4>Change Password</h4>
+              <p>Update your password via secure email link</p>
+            </div>
+            <svg class="account-action-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+
+          <div class="account-action-card" (click)="onLogout()">
+            <div class="account-action-icon orange-icon">🚪</div>
+            <div class="account-action-info">
+              <h4>Logout</h4>
+              <p>Sign out of your current session</p>
+            </div>
+            <svg class="account-action-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+
+          <div class="account-action-card danger-card" (click)="onDeleteAccount()">
+            <div class="account-action-icon red-icon">🗑️</div>
+            <div class="account-action-info">
+              <h4>Delete Account</h4>
+              <p>Permanently delete all your data. This cannot be undone.</p>
+            </div>
+            <svg class="account-action-arrow" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </div>
+
+        <div class="account-info-section">
+          <div class="account-info-row">
+            <span class="account-info-label">Email</span>
+            <span class="account-info-value">{{ email }}</span>
+          </div>
+          <div class="account-info-row">
+            <span class="account-info-label">Role</span>
+            <span class="account-info-value">Student</span>
+          </div>
+          <div class="account-info-row">
+            <span class="account-info-label">Profile Completion</span>
+            <span class="account-info-value">{{ computeCompletionPct() }}%</span>
+          </div>
+        </div>
+      </section>
+
+    </div> <!-- end !isLoading -->
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- RESUME UPLOAD MODAL                                                    -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="isUploadModalOpen()" (click)="closeUploadModal()">
+  <div class="resume-upload-modal" (click)="$event.stopPropagation()">
+    <button class="modal-close-x" (click)="closeUploadModal()">✕</button>
+
+    <!-- Step: Select File -->
+    <div *ngIf="uploadStep() === 'select'" class="modal-body-step">
+      <div class="modal-icon-wrap">📄</div>
+      <h2 class="modal-title">Upload Your Resume</h2>
+      <p class="modal-subtitle">Upload a text-based PDF (not a scanned image)</p>
+      <div class="drop-zone" (click)="resumeInput.click()">
+        <input #resumeInput type="file" accept=".pdf" hidden (change)="onResumeFileSelected($event)">
+        <svg class="upload-svg" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+          <path stroke-linecap="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+        </svg>
+        <p class="drop-text">Drag &amp; drop or <span class="browse-link">browse files</span></p>
+        <span class="drop-hint">PDF only · Max 10 MB</span>
       </div>
+      <div *ngIf="uploadError()" class="upload-err-msg">{{ uploadError() }}</div>
+    </div>
 
-      <!-- CARD 6: Career Interests & Onboarding Preferences -->
-      <div class="review-card glass-card">
-        <div class="card-header-row">
-          <h3 class="card-title">Career Preferences</h3>
-          <span class="badge-incomplete">⚠ Complete Manually</span>
-        </div>
-
-        <div class="form-row-grid">
-          <div class="form-group">
-            <label class="form-label">Preferred Job Role *</label>
-            <input type="text" [(ngModel)]="preferredRole" name="preferredRole" class="form-input" placeholder="Software Engineer, Product Manager" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Preferred Location / City *</label>
-            <input type="text" [(ngModel)]="preferredCity" name="preferredCity" class="form-input" placeholder="Bangalore, Hybrid/Remote" required>
-          </div>
-        </div>
-
-        <div class="form-row-grid">
-          <div class="form-group">
-            <label class="form-label">Expected Annual Salary</label>
-            <input type="text" [(ngModel)]="expectedSalary" name="expectedSalary" class="form-input" placeholder="e.g. ₹12,00,000 or $80,000">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Employment Type *</label>
-            <select [(ngModel)]="employmentType" name="employmentType" class="form-input" required>
-              <option value="FULL_TIME">Full-Time</option>
-              <option value="PART_TIME">Part-Time</option>
-              <option value="INTERNSHIP">Internship</option>
-              <option value="CONTRACT">Contract</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Work Mode Preference *</label>
-          <select [(ngModel)]="workMode" name="workMode" class="form-input" required>
-            <option value="REMOTE">Remote</option>
-            <option value="HYBRID">Hybrid</option>
-            <option value="ONSITE">On-Site</option>
-          </select>
-        </div>
+    <!-- Step: Uploading / Processing -->
+    <div *ngIf="uploadStep() === 'uploading'" class="modal-body-step text-center">
+      <div class="upload-spinner"></div>
+      <h2 class="modal-title">Processing Your Resume</h2>
+      <p class="modal-stage-label">{{ processingStage() }}</p>
+      <div class="modal-progress-track">
+        <div class="modal-progress-fill" [style.width.%]="uploadProgress()"></div>
       </div>
-
-      <div class="actions-row" style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
-        <button type="button" (click)="fetchExtractedData()" class="btn btn-secondary">Re-fetch Resume</button>
-        <button type="submit" class="btn btn-primary" style="padding: 0.75rem 3rem;">Confirm & Continue</button>
+      <div class="progress-meta">
+        <span>{{ uploadProgress() }}%</span>
+        <span *ngIf="processingEtaSecs() > 0">~{{ processingEtaSecs() }}s remaining</span>
+        <span *ngIf="processingEtaSecs() === 0">Almost done...</span>
       </div>
+    </div>
 
-    </form>
+    <!-- Step: Done -->
+    <div *ngIf="uploadStep() === 'done'" class="modal-body-step text-center">
+      <div class="done-check">✅</div>
+      <h2 class="modal-title">Resume Processed!</h2>
+      <p class="modal-subtitle">Your profile has been updated from the resume.</p>
+    </div>
 
+    <!-- Step: Error -->
+    <div *ngIf="uploadStep() === 'error'" class="modal-body-step text-center">
+      <div class="error-icon">❌</div>
+      <h2 class="modal-title">Processing Failed</h2>
+      <p class="modal-err-text">{{ uploadError() }}</p>
+      <button class="btn-retry" (click)="uploadStep.set('select'); uploadError.set(null)">Try Again</button>
+    </div>
+  </div>
 </div>
