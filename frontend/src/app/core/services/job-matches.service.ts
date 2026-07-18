@@ -39,6 +39,10 @@ export interface MatchDetailsResponse {
   domainFit?: number;
   behavioralFit?: number;
   eduCertFit?: number;
+  salaryRange?: string;
+  jobType?: string;
+  workMode?: string;
+  experienceLevel?: string;
 }
 
 @Injectable({

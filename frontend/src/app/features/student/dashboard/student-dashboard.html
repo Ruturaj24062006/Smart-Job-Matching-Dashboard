@@ -777,16 +777,44 @@
             </div>
           </div>
 
+          <!-- Company Overview -->
+          <div class="modal-info-section" style="background: rgba(144,48,27,0.03); padding: 1rem 1.25rem; border-radius: 10px; border: 1px solid #efe8da; margin-bottom: 1rem;">
+            <h4 class="modal-section-title" style="color: #90301B; font-family: var(--font-serif); margin-bottom: 0.35rem;">Company Overview</h4>
+            <p class="modal-info-text" style="font-size: 0.9rem; color: #4b5563; line-height: 1.5;">
+              <strong>{{ match.companyName }}</strong> is a leading technology organization specializing in enterprise software, artificial intelligence, and cloud engineering.
+            </p>
+          </div>
+
+          <!-- Quick Specs Grid -->
+          <div class="modal-specs-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; margin-bottom: 1.25rem;">
+            <div style="background: #fff; padding: 0.75rem; border-radius: 8px; border: 1px solid #e7e0d6;">
+              <span style="font-size: 0.72rem; text-transform: uppercase; color: #6b7280; font-weight: 700; display: block;">Location</span>
+              <strong style="font-size: 0.88rem; color: #1f2937;">📍 {{ match.location }}</strong>
+            </div>
+            <div style="background: #fff; padding: 0.75rem; border-radius: 8px; border: 1px solid #e7e0d6;">
+              <span style="font-size: 0.72rem; text-transform: uppercase; color: #6b7280; font-weight: 700; display: block;">Salary & Package</span>
+              <strong style="font-size: 0.88rem; color: #16a34a;">💰 {{ match.salaryRange || 'Competitive LPA' }}</strong>
+            </div>
+            <div style="background: #fff; padding: 0.75rem; border-radius: 8px; border: 1px solid #e7e0d6;">
+              <span style="font-size: 0.72rem; text-transform: uppercase; color: #6b7280; font-weight: 700; display: block;">Experience Tier</span>
+              <strong style="font-size: 0.88rem; color: #4338ca;">🎓 {{ match.experienceLevel || 'Entry-Mid' }}</strong>
+            </div>
+            <div style="background: #fff; padding: 0.75rem; border-radius: 8px; border: 1px solid #e7e0d6;">
+              <span style="font-size: 0.72rem; text-transform: uppercase; color: #6b7280; font-weight: 700; display: block;">Job Type & Mode</span>
+              <strong style="font-size: 0.88rem; color: #d97706;">💼 {{ match.jobType || 'FULL_TIME' }} ({{ match.workMode || 'HYBRID' }})</strong>
+            </div>
+          </div>
+
           <!-- Description -->
-          <div class="modal-info-section">
-            <h4 class="modal-section-title">Job Description</h4>
-            <p class="modal-info-text">{{ match.jobDescription }}</p>
+          <div class="modal-info-section" style="margin-bottom: 1.25rem;">
+            <h4 class="modal-section-title" style="color: #1f2937;">Job Description</h4>
+            <p class="modal-info-text" style="font-size: 0.92rem; color: #374151; line-height: 1.6;">{{ match.jobDescription }}</p>
           </div>
 
           <!-- Requirements -->
-          <div class="modal-info-section" *ngIf="match.jobRequirements">
-            <h4 class="modal-section-title">Requirements</h4>
-            <p class="modal-info-text">{{ match.jobRequirements }}</p>
+          <div class="modal-info-section" *ngIf="match.jobRequirements" style="margin-bottom: 1.25rem;">
+            <h4 class="modal-section-title" style="color: #1f2937;">Key Requirements & Tech Stack</h4>
+            <p class="modal-info-text" style="font-size: 0.92rem; color: #374151; line-height: 1.6;">{{ match.jobRequirements }}</p>
           </div>
         </div>
 
