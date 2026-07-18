@@ -31,7 +31,7 @@ export class StudentDashboard implements OnInit, OnDestroy {
   aiSkillGap = signal<any | null>(null);
 
   // Tab & search filtering signals
-  activeTab = signal<'recommendations' | 'discover' | 'applications'>('recommendations');
+  activeTab = signal<'recommendations' | 'discover' | 'applications' | 'profile'>('recommendations');
   searchRole = signal<string>('');
   searchLocation = signal<string>('');
   filterExperience = signal<string>('');
@@ -46,6 +46,7 @@ export class StudentDashboard implements OnInit, OnDestroy {
 
   // Job Board & Bookmark signals
   selectedJobBoard = signal<string>('All Matches');
+  jobBoardsExpanded = signal<boolean>(true);
   savedJobIds = signal<Set<string>>(new Set());
 
   // Upload & Review Popup Modal signals
@@ -456,7 +457,11 @@ export class StudentDashboard implements OnInit, OnDestroy {
     this.sendQuestion(question);
   }
 
-  changeTab(tab: 'recommendations' | 'discover' | 'applications'): void {
+  changeTab(tab: 'recommendations' | 'discover' | 'applications' | 'profile'): void {
+    if (tab === 'profile') {
+      this.router.navigate(['/student/profile-review']);
+      return;
+    }
     this.activeTab.set(tab);
     if (tab === 'discover') {
       if (this.searchResults().length === 0) {
@@ -474,6 +479,10 @@ export class StudentDashboard implements OnInit, OnDestroy {
         window.history.replaceState({}, '', '/student/dashboard');
       }
     }
+  }
+
+  toggleJobBoards(): void {
+    this.jobBoardsExpanded.update(v => !v);
   }
 
   searchJobs(): void {
@@ -728,9 +737,10 @@ export class StudentDashboard implements OnInit, OnDestroy {
       if (attempts > maxAttempts) {
         this.stopModalPolling();
         this.stopEtaCountdown();
+        this.isProfileFallback.set(true);
         this.uploadStep.set('error');
         this.uploadError.set(
-          'AI processing timed out after 3 minutes. The resume may be too complex or the server is busy. Please try uploading a simpler PDF or try again later.'
+          'AI processing timed out. You can continue using your Profile details for job matching, or try uploading a simpler PDF.'
         );
         return;
       }
@@ -739,30 +749,32 @@ export class StudentDashboard implements OnInit, OnDestroy {
         next: (res) => {
           if (res.success && res.data) {
             if (res.data.processingStatus === 'FAILED') {
-              // Real failure from backend — show actual error
+              // Failure from backend — offer Profile fallback
               this.stopModalPolling();
               this.stopEtaCountdown();
+              this.isProfileFallback.set(true);
               this.uploadStep.set('error');
               this.uploadError.set(
-                'AI could not parse your resume. This may be due to a scanned image-only PDF or unsupported formatting. Please try a text-based PDF.'
+                'AI could not parse your resume file. You can continue using your Profile details for job matching, or try another file.'
               );
               return;
             }
             if (res.data.extractedJson) {
               this.stopModalPolling();
               this.stopEtaCountdown();
+              this.isProfileFallback.set(false);
               const rawJson = res.data.extractedJson;
               let parsed: any = null;
               try {
                 parsed = typeof rawJson === 'string' ? JSON.parse(rawJson) : rawJson;
               } catch (e) {
                 console.error('JSON parse error', e);
+                this.isProfileFallback.set(true);
                 this.uploadStep.set('error');
-                this.uploadError.set('Failed to read extracted resume data. Please try again.');
+                this.uploadError.set('Failed to read extracted resume data. You can continue using your Profile details.');
                 return;
               }
               this.extractedData.set(parsed);
-              // Only use values actually extracted from the resume — no hardcoded defaults
               this.reviewRole = parsed?.preferredRole || parsed?.currentTitle || '';
               this.reviewCity = parsed?.location || '';
               this.reviewExperience = parsed?.experienceLevel || '';
@@ -770,15 +782,42 @@ export class StudentDashboard implements OnInit, OnDestroy {
               this.uploadProgress.set(100);
               this.uploadStep.set('review');
             }
-            // else: still PROCESSING — keep polling
           }
         },
         error: () => {
-          // Network error during poll — just keep trying
           console.warn('Resume status poll failed, retrying...');
         }
       });
     }, 3000);
+  }
+
+  isProfileFallback = signal<boolean>(false);
+
+  continueWithProfileFallback(): void {
+    this.isProfileFallback.set(true);
+    this.populateReviewFromProfile();
+    this.uploadStep.set('review');
+  }
+
+  populateReviewFromProfile(): void {
+    const prof = this.profile();
+    if (prof) {
+      this.reviewRole = prof.careerPreferences || prof.bio || '';
+      if (prof.careerPreferences && prof.careerPreferences.includes('Role:')) {
+        const roleMatch = prof.careerPreferences.match(/Role:\s*([^;]+)/);
+        const cityMatch = prof.careerPreferences.match(/City:\s*([^;]+)/);
+        const modeMatch = prof.careerPreferences.match(/Mode:\s*([^;]+)/);
+        if (roleMatch) this.reviewRole = roleMatch[1].trim();
+        if (cityMatch) this.reviewCity = cityMatch[1].trim();
+        if (modeMatch) this.reviewWorkMode = modeMatch[1].trim();
+      } else {
+        if (prof.city) this.reviewCity = prof.city;
+      }
+      this.extractedData.set({
+        skills: prof.skills || [],
+        source: 'profile'
+      });
+    }
   }
 
   private startEtaCountdown(): void {
@@ -802,23 +841,40 @@ export class StudentDashboard implements OnInit, OnDestroy {
     }
   }
 
-
   confirmModalAndSearchJobs(): void {
-    const resumeId = this.currentResumeId();
-    if (resumeId) {
-      this.profileService.confirmResume(resumeId).subscribe({
-        next: () => this.onConfirmSuccess(),
-        error: () => this.onConfirmSuccess()
+    // Save updated preferences from modal to profile
+    const prefs = [
+      this.reviewRole ? `Role: ${this.reviewRole}` : '',
+      this.reviewCity ? `City: ${this.reviewCity}` : '',
+      this.reviewWorkMode ? `Mode: ${this.reviewWorkMode}` : ''
+    ].filter(Boolean).join('; ');
+
+    const currentProf = this.profile();
+    if (currentProf) {
+      const updated: any = {
+        ...currentProf,
+        careerPreferences: prefs
+      };
+      this.profileService.updateProfile(updated).subscribe({
+        next: () => this.triggerMatchingAndNavigate(),
+        error: () => this.triggerMatchingAndNavigate()
       });
     } else {
-      this.onConfirmSuccess();
+      this.triggerMatchingAndNavigate();
     }
+  }
+
+  private triggerMatchingAndNavigate(): void {
+    this.matchesService.generateMatches().subscribe({
+      next: () => this.onConfirmSuccess(),
+      error: () => this.onConfirmSuccess()
+    });
   }
 
   private onConfirmSuccess(): void {
     this.closeUploadModal();
-    // Navigate to the dedicated Find Jobs page so the user can see all matches
     this.router.navigate(['/student/find-jobs']);
+
   }
 
   respondToInterview(applicationId: string, response: string): void {

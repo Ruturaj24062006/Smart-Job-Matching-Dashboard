@@ -31,20 +31,36 @@ export interface ProjectDto {
   technologies?: string;
 }
 
+export interface CertificationDto {
+  name: string;
+  issuingOrganization?: string;
+  issueDate?: string;
+  expirationDate?: string;
+  credentialUrl?: string;
+}
+
 export interface StudentProfileDto {
   firstName: string;
   lastName: string;
   bio?: string;
+  phone?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  city?: string;
+  state?: string;
+  country?: string;
   githubUrl?: string;
   linkedinUrl?: string;
   portfolioUrl?: string;
   careerPreferences?: string;
   languages?: string;
+  noticePeriod?: string;
   profileCompletedPct: number;
   skills: SkillDto[];
   projects: ProjectDto[];
   experience: ExperienceDto[];
   education: EducationDto[];
+  certifications?: CertificationDto[];
 }
 
 @Injectable({

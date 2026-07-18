@@ -108,7 +108,7 @@ public class ScoringService {
             }
         }
 
-        // Check experience titles domain
+        // Check experience titles domain & career preferences
         if (student.getExperience() != null) {
             for (StudentExperience exp : student.getExperience()) {
                 String title = exp.getJobTitle() != null ? exp.getJobTitle().toLowerCase() : "";
@@ -119,6 +119,22 @@ public class ScoringService {
                     (jobTitle.contains("data") && title.contains("data"))) {
                     score = Math.max(score, 10.0);
                 }
+            }
+        }
+
+        if (student.getCareerPreferences() != null && !student.getCareerPreferences().isBlank()) {
+            String prefs = student.getCareerPreferences().toLowerCase();
+            if ((jobTitle.contains("frontend") && prefs.contains("frontend")) ||
+                (jobTitle.contains("backend") && prefs.contains("backend")) ||
+                (jobTitle.contains("fullstack") && prefs.contains("fullstack")) ||
+                (jobTitle.contains("mobile") && prefs.contains("mobile")) ||
+                (jobTitle.contains("data") && prefs.contains("data")) ||
+                (jobTitle.contains("java") && prefs.contains("java")) ||
+                (jobTitle.contains(".net") && prefs.contains(".net")) ||
+                (jobTitle.contains("ai") && prefs.contains("ai")) ||
+                (jobTitle.contains("engineer") && prefs.contains("engineer")) ||
+                (jobTitle.contains("developer") && prefs.contains("developer"))) {
+                score = Math.max(score, 10.0);
             }
         }
 

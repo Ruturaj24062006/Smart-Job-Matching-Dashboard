@@ -98,10 +98,14 @@
 
       <!-- ERROR STATE -->
       <div *ngIf="status() === 'error'" class="error-state animate-fade-in">
-        <div class="error-cross">❌</div>
-        <h3 class="loading-title">Processing Failed</h3>
+        <div class="error-cross">⚠️</div>
+        <h3 class="loading-title">Resume Parsing Unsuccessful</h3>
         <p class="loading-subtitle">{{ errorMessage() || 'An error occurred during resume processing.' }}</p>
-        <button (click)="reset()" class="btn btn-primary" style="margin-top: 1.5rem;">Try Again</button>
+        <p style="font-size: 0.85rem; color: #6b7280; margin-top: 0.5rem;">Don't worry, you can continue using your Profile details for job matching!</p>
+        <div style="display: flex; gap: 0.75rem; justify-content: center; margin-top: 1.5rem;">
+          <button (click)="reset()" class="btn btn-secondary">Try Another File</button>
+          <a href="/student/dashboard" class="btn btn-primary">Continue with Profile 🔍</a>
+        </div>
       </div>
 
     </div>

@@ -497,9 +497,10 @@ export class FindJobs implements OnInit, OnDestroy {
       if (attempts > maxAttempts) {
         this.stopModalPolling();
         this.stopEtaCountdown();
+        this.isProfileFallback.set(true);
         this.uploadStep.set('error');
         this.uploadError.set(
-          'AI processing timed out after 3 minutes. The resume may be too complex or the server is busy. Please try uploading a simpler PDF or try again later.'
+          'AI processing timed out. You can continue using your Profile details for job matching, or try uploading a simpler PDF.'
         );
         return;
       }
@@ -510,22 +511,25 @@ export class FindJobs implements OnInit, OnDestroy {
             if (res.data.processingStatus === 'FAILED') {
               this.stopModalPolling();
               this.stopEtaCountdown();
+              this.isProfileFallback.set(true);
               this.uploadStep.set('error');
               this.uploadError.set(
-                'AI could not parse your resume. This may be due to a scanned image-only PDF or unsupported formatting. Please try a text-based PDF.'
+                'AI could not parse your resume file. You can continue using your Profile details for job matching, or try another file.'
               );
               return;
             }
             if (res.data.extractedJson) {
               this.stopModalPolling();
               this.stopEtaCountdown();
+              this.isProfileFallback.set(false);
               const rawJson = res.data.extractedJson;
               let parsed: any = null;
               try {
                 parsed = typeof rawJson === 'string' ? JSON.parse(rawJson) : rawJson;
               } catch (e) {
+                this.isProfileFallback.set(true);
                 this.uploadStep.set('error');
-                this.uploadError.set('Failed to read extracted resume data. Please try again.');
+                this.uploadError.set('Failed to read extracted resume data. You can continue using your Profile details.');
                 return;
               }
               this.extractedData.set(parsed);
@@ -543,6 +547,35 @@ export class FindJobs implements OnInit, OnDestroy {
         }
       });
     }, 3000);
+  }
+
+  isProfileFallback = signal<boolean>(false);
+
+  continueWithProfileFallback(): void {
+    this.isProfileFallback.set(true);
+    this.populateReviewFromProfile();
+    this.uploadStep.set('review');
+  }
+
+  populateReviewFromProfile(): void {
+    const prof = this.profile();
+    if (prof) {
+      this.reviewRole = prof.careerPreferences || prof.bio || '';
+      if (prof.careerPreferences && prof.careerPreferences.includes('Role:')) {
+        const roleMatch = prof.careerPreferences.match(/Role:\s*([^;]+)/);
+        const cityMatch = prof.careerPreferences.match(/City:\s*([^;]+)/);
+        const modeMatch = prof.careerPreferences.match(/Mode:\s*([^;]+)/);
+        if (roleMatch) this.reviewRole = roleMatch[1].trim();
+        if (cityMatch) this.reviewCity = cityMatch[1].trim();
+        if (modeMatch) this.reviewWorkMode = modeMatch[1].trim();
+      } else {
+        if (prof.city) this.reviewCity = prof.city;
+      }
+      this.extractedData.set({
+        skills: prof.skills || [],
+        source: 'profile'
+      });
+    }
   }
 
   private startEtaCountdown(): void {
@@ -567,21 +600,38 @@ export class FindJobs implements OnInit, OnDestroy {
   }
 
   confirmModalAndSearchJobs(): void {
-    const resumeId = this.currentResumeId();
-    if (resumeId) {
-      this.profileService.confirmResume(resumeId).subscribe({
-        next: () => {
-          this.closeUploadModal();
-          this.fetchMatches();
-        },
-        error: () => {
-          this.closeUploadModal();
-          this.fetchMatches();
-        }
+    const prefs = [
+      this.reviewRole ? `Role: ${this.reviewRole}` : '',
+      this.reviewCity ? `City: ${this.reviewCity}` : '',
+      this.reviewWorkMode ? `Mode: ${this.reviewWorkMode}` : ''
+    ].filter(Boolean).join('; ');
+
+    const currentProf = this.profile();
+    if (currentProf) {
+      const updated: any = {
+        ...currentProf,
+        careerPreferences: prefs
+      };
+      this.profileService.updateProfile(updated).subscribe({
+        next: () => this.triggerMatchingAndFetch(),
+        error: () => this.triggerMatchingAndFetch()
       });
     } else {
-      this.closeUploadModal();
-      this.fetchMatches();
+      this.triggerMatchingAndFetch();
     }
   }
+
+  private triggerMatchingAndFetch(): void {
+    this.matchesService.generateMatches().subscribe({
+      next: () => {
+        this.closeUploadModal();
+        this.fetchMatches();
+      },
+      error: () => {
+        this.closeUploadModal();
+        this.fetchMatches();
+      }
+    });
+  }
 }
+
