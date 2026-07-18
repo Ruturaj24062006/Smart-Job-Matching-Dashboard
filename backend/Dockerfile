@@ -15,4 +15,4 @@ COPY --from=build /app/target/career-match-backend-0.0.1-SNAPSHOT.jar app.jar
 
 EXPOSE 8080
 ENV JAVA_OPTS="-Xmx350m -Xms128m -XX:+UseContainerSupport -XX:MaxRAMPercentage=70.0"
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -Dserver.port=${PORT:-8080} -jar app.jar"]
