@@ -75,7 +75,7 @@ public class SearchService {
             sb.append("Experience: ");
             for (var exp : student.getExperience()) {
                 if (exp.getJobTitle() != null) sb.append(exp.getJobTitle()).append(" ");
-                if (exp.getCompany() != null) sb.append(exp.getCompany()).append(" ");
+                if (exp.getCompanyName() != null) sb.append(exp.getCompanyName()).append(" ");
                 if (exp.getDescription() != null) sb.append(exp.getDescription()).append(". ");
             }
         }
