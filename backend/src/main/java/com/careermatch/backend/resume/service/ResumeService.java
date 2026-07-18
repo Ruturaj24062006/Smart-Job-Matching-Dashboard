@@ -152,11 +152,7 @@ public class ResumeService {
     @Transactional
     public void saveResumeAndDeactivateOthers(Resume resume) {
         Student student = resume.getStudent();
-        resumeRepository.findByStudentId(student.getId()).forEach(r -> {
-            if (!r.getId().equals(resume.getId())) {
-                r.setCurrent(false);
-            }
-        });
+        resumeRepository.deactivateOtherResumes(student.getId(), resume.getId());
         resume.setCurrent(true);
         resumeRepository.save(resume);
     }

@@ -113,5 +113,26 @@ public class QueueConfig {
     public org.springframework.amqp.support.converter.MessageConverter jsonMessageConverter() {
         return new org.springframework.amqp.support.converter.Jackson2JsonMessageConverter();
     }
+
+    @Bean
+    public org.springframework.amqp.rabbit.connection.ConnectionFactory connectionFactory() {
+        String rabbitmqUrl = System.getenv("RABBITMQ_URL");
+        org.springframework.amqp.rabbit.connection.CachingConnectionFactory factory = 
+            new org.springframework.amqp.rabbit.connection.CachingConnectionFactory();
+        if (rabbitmqUrl != null && !rabbitmqUrl.isEmpty()) {
+            try {
+                factory.setUri(rabbitmqUrl);
+            } catch (Exception e) {
+                // Fallback to local
+                factory.setHost("localhost");
+                factory.setPort(5672);
+            }
+        } else {
+            factory.setHost("localhost");
+            factory.setPort(5672);
+        }
+        return factory;
+    }
 }
+
 

@@ -2,6 +2,7 @@ package com.careermatch.backend.resume.repository;
 
 import com.careermatch.backend.resume.entity.Resume;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -14,6 +15,11 @@ import java.util.UUID;
 public interface ResumeRepository extends JpaRepository<Resume, UUID> {
     List<Resume> findByStudentId(UUID studentId);
     Optional<Resume> findByStudentIdAndIsCurrentTrue(UUID studentId);
+
+    @Modifying
+    @Query("UPDATE Resume r SET r.isCurrent = false WHERE r.student.id = :studentId AND r.id <> :resumeId")
+    void deactivateOtherResumes(@Param("studentId") UUID studentId, @Param("resumeId") UUID resumeId);
+
 
     @Query(value = """
         WITH vector_search AS (
