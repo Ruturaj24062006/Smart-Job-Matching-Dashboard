@@ -16,6 +16,9 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
     List<Job> findByStatus(JobStatus status);
     List<Job> findByRecruiterId(UUID recruiterId);
 
+    @Query("SELECT COUNT(j) FROM Job j WHERE j.company.id = :companyId")
+    long countByCompanyId(@Param("companyId") UUID companyId);
+
     @Query(value = """
         WITH vector_search AS (
           SELECT id, ROW_NUMBER() OVER (ORDER BY embedding <=> cast(:queryVector as vector)) as rank

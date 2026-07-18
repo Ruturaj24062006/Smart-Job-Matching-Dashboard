@@ -10,6 +10,13 @@ spring:
     username: postgres.qacuyhktzqhfqtswsrgs
     password: "atharvbhavsar%27s%20Project"
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 3
+      minimum-idle: 1
+      idle-timeout: 30000
+      max-lifetime: 1800000
+      connection-timeout: 20000
+  
   
   jpa:
     hibernate:
@@ -25,8 +32,10 @@ spring:
       url: ${REDIS_URL:redis://localhost:6379}
   rabbitmq:
     addresses: ${RABBITMQ_URL:amqp://localhost:5672}
+    connection-timeout: 3000
     listener:
       simple:
+        auto-startup: false
         retry:
           enabled: true
           max-attempts: 3

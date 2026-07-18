@@ -39,6 +39,14 @@ public class JobDataSeeder {
     @EventListener(ApplicationReadyEvent.class)
     @Transactional
     public void seedJobsOnStartup() {
+        try {
+            doSeedJobsOnStartup();
+        } catch (Exception e) {
+            log.warn("JobDataSeeder: Seeding skipped due to error (will not crash startup): {}", e.getMessage());
+        }
+    }
+
+    private void doSeedJobsOnStartup() {
         // Ensure Nexora Technologies Pvt. Ltd. company exists
         Company company = companyRepository.findByNameIgnoreCase("Nexora Technologies Pvt. Ltd.")
                 .orElseGet(() -> companyRepository.save(Company.builder()
@@ -68,15 +76,14 @@ public class JobDataSeeder {
                         .isVerified(true)
                         .build()));
 
-        // Check if Nexora jobs already exist
-        long nexoraJobCount = jobRepository.findAll().stream()
-                .filter(j -> j.getCompany() != null && "Nexora Technologies Pvt. Ltd.".equalsIgnoreCase(j.getCompany().getName()))
-                .count();
+        // Use count query to avoid loading embedding vector columns (which crash Hibernate)
+        long nexoraJobCount = jobRepository.countByCompanyId(company.getId());
 
         if (nexoraJobCount >= 4) {
             log.info("Nexora Technologies jobs already present ({} jobs). Skipping duplicate seed.", nexoraJobCount);
             return;
         }
+
 
         log.info("Seeding Nexora Technologies Pvt. Ltd. jobs into database...");
 

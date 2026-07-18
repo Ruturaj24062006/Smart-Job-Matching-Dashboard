@@ -3,7 +3,6 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { Router, RouterLink } from '@angular/router';
 import { NgIf, NgClass } from '@angular/common';
 import { AuthService } from '../../../core/services/auth.service';
-import { StudentProfileService } from '../../../core/services/student-profile.service';
 
 @Component({
   selector: 'app-login',
@@ -19,7 +18,6 @@ export class Login implements OnInit {
   constructor(
     private readonly fb: FormBuilder,
     private readonly authService: AuthService,
-    private readonly profileService: StudentProfileService,
     private readonly router: Router
   ) {
     this.loginForm = this.fb.group({
@@ -29,63 +27,7 @@ export class Login implements OnInit {
   }
 
   ngOnInit(): void {
-    this.initGoogleSignIn();
-  }
-
-  initGoogleSignIn(): void {
-    const checkGoogle = setInterval(() => {
-      if (typeof window !== 'undefined' && (window as any).google) {
-        clearInterval(checkGoogle);
-
-        const clientId = '562305543169-qgghq9tr4v4o0npsqg27sc6ndv7b0688.apps.googleusercontent.com';
-
-        if ((window as any).googleInitialized) {
-          const btnContainer = document.getElementById('googleBtn');
-          if (btnContainer) {
-            (window as any).google.accounts.id.renderButton(
-              btnContainer,
-              { theme: 'outline', size: 'large', width: 320, text: 'continue_with', shape: 'rectangular' }
-            );
-          }
-          return;
-        }
-
-        (window as any).google.accounts.id.initialize({
-          client_id: clientId,
-          callback: this.handleGoogleCredential.bind(this)
-        });
-        (window as any).googleInitialized = true;
-
-        const btnContainer = document.getElementById('googleBtn');
-        if (btnContainer) {
-          (window as any).google.accounts.id.renderButton(
-            btnContainer,
-            { theme: 'outline', size: 'large', width: 320, text: 'continue_with', shape: 'rectangular' }
-          );
-        }
-      }
-    }, 500);
-  }
-
-  handleGoogleCredential(response: any): void {
-    const idToken = response.credential;
-    this.isLoading.set(true);
-    this.errorMessage.set(null);
-
-    this.authService.loginWithGoogle(idToken).subscribe({
-      next: (res: any) => {
-        this.isLoading.set(false);
-        if (res.success && res.data) {
-          this.redirectBasedOnRole(res.data.role);
-        } else {
-          this.errorMessage.set(res.message || 'Google login failed.');
-        }
-      },
-      error: (err: any) => {
-        this.isLoading.set(false);
-        this.errorMessage.set(err.error?.message || 'Google login failed.');
-      }
-    });
+    // Google Sign-In disabled — use email/password login
   }
 
   onSubmit(): void {
