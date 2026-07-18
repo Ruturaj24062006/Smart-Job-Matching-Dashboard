@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { NgIf, NgClass } from '@angular/common';
@@ -10,7 +10,7 @@ import { AuthService } from '../../../core/services/auth.service';
   templateUrl: './login.html',
   styleUrl: './login.css'
 })
-export class Login {
+export class Login implements OnInit {
   loginForm: FormGroup;
   isLoading = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
@@ -24,6 +24,73 @@ export class Login {
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(6)]]
     });
+  }
+
+  ngOnInit(): void {
+    // Check if there is an active session
+    if (this.authService.isAuthenticated()) {
+      this.router.navigate(['/student/dashboard']);
+      return;
+    }
+    this.initGoogleSignIn();
+  }
+
+  initGoogleSignIn(): void {
+    const checkGoogle = setInterval(() => {
+      if (typeof window !== 'undefined' && (window as any).google) {
+        clearInterval(checkGoogle);
+        
+        // This Client ID should be set by the user based on their Google Cloud Console.
+        // It matches the configuration they are performing in Supabase Auth settings.
+        const clientId = '562305543169-qgghq9tr4v4o0npsqg27sc6ndv7b0688.apps.googleusercontent.com';
+        
+        (window as any).google.accounts.id.initialize({
+          client_id: clientId,
+          callback: this.handleGoogleCredential.bind(this)
+        });
+
+        const btnContainer = document.getElementById('googleBtn');
+        if (btnContainer) {
+          (window as any).google.accounts.id.renderButton(
+            btnContainer,
+            { theme: 'outline', size: 'large' }
+          );
+        }
+      }
+    }, 500);
+  }
+
+  handleGoogleCredential(response: any): void {
+    const idToken = response.credential;
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+
+    this.authService.loginWithGoogle(idToken).subscribe({
+      next: (res) => {
+        this.isLoading.set(false);
+        if (res.success && res.data) {
+          this.redirectBasedOnRole(res.data.role);
+        } else {
+          this.errorMessage.set(res.message || 'Google login failed.');
+        }
+      },
+      error: (err) => {
+        this.isLoading.set(false);
+        this.errorMessage.set(err.error?.message || 'Google login failed.');
+      }
+    });
+  }
+
+  signInWithGoogle(): void {
+    const iframe = document.querySelector('#googleBtn iframe') as HTMLElement;
+    const divBtn = document.querySelector('#googleBtn div[role="button"]') as HTMLElement;
+    if (iframe) {
+      iframe.click();
+    } else if (divBtn) {
+      divBtn.click();
+    } else {
+      (window as any).google?.accounts?.id?.prompt();
+    }
   }
 
   onSubmit(): void {

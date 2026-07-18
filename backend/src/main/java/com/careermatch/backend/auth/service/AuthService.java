@@ -197,40 +197,88 @@ public class AuthService {
 
     @Transactional
     public LoginResponse loginWithGoogle(GoogleLoginRequest request) {
-        log.warn("OAuth Google Sign-in should be handled on client side using Supabase SDK. Processing request via mock fallback.");
-        String email = "google-student@careermatch.com";
+        // 1. Exchange Google ID Token with Supabase Auth for valid session tokens
+        Map<String, Object> tokenData = loginWithGoogleInSupabase(request.getIdToken());
+        String accessToken = (String) tokenData.get("access_token");
+        String refreshToken = (String) tokenData.get("refresh_token");
+
+        // Extract user details returned by Supabase
+        Map<String, Object> userMap = (Map<String, Object>) tokenData.get("user");
+        if (userMap == null) {
+            throw new BadRequestException("Failed to retrieve user details from Google OAuth.");
+        }
+        String supabaseUserId = (String) userMap.get("id");
+        String email = (String) userMap.get("email");
+        UUID userId = UUID.fromString(supabaseUserId);
+
+        // 2. Auto-register user locally if they don't already exist
         User user = userRepository.findByEmail(email).orElseGet(() -> {
             User newUser = User.builder()
+                    .id(userId)
                     .email(email)
-                    .passwordHash(passwordEncoder.encode("OAuth-mock-password"))
-                    .role(UserRole.ROLE_STUDENT)
+                    .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString())) // Random password hash
+                    .role(UserRole.ROLE_STUDENT) // Default Google users to STUDENT role
                     .isVerified(true)
                     .build();
             User saved = userRepository.save(newUser);
+            
             studentRepository.save(Student.builder()
-                    .id(saved.getId())
                     .user(saved)
                     .firstName("Google")
                     .lastName("User")
-                    .profileCompletedPct(20)
+                    .profileCompletedPct(0)
                     .build());
+            log.info("Auto-registered new Google user locally: {}", email);
             return saved;
         });
-
-        UserDetails userDetails = new org.springframework.security.core.userdetails.User(
-                user.getEmail(),
-                "",
-                Collections.singletonList(new SimpleGrantedAuthority(user.getRole().name()))
-        );
-        String token = jwtTokenProvider.generateToken(userDetails);
-        String refresh = jwtTokenProvider.generateRefreshToken(userDetails);
 
         return LoginResponse.builder()
                 .userId(user.getId())
                 .role(user.getRole().name())
-                .accessToken(token)
-                .refreshToken(refresh)
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
                 .build();
+    }
+
+    private Map<String, Object> loginWithGoogleInSupabase(String idToken) {
+        if ("mock-anon-key".equals(supabaseAnonKey) || supabaseUrl.contains("your-project")) {
+            log.warn("Supabase credentials not configured. Generating mock token data.");
+            return Map.of(
+                "access_token", "mock-access-token",
+                "refresh_token", "mock-refresh-token",
+                "user", Map.of(
+                    "id", UUID.randomUUID().toString(),
+                    "email", "google-student@careermatch.com"
+                )
+            );
+        }
+
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("apikey", supabaseAnonKey);
+
+            Map<String, String> body = Map.of(
+                "provider", "google",
+                "token", idToken
+            );
+            HttpEntity<Map<String, String>> entity = new HttpEntity<>(body, headers);
+
+            RestTemplate restTemplate = new RestTemplate();
+            ResponseEntity<Map> response = restTemplate.postForEntity(
+                supabaseUrl + "/auth/v1/token?grant_type=id_token",
+                entity,
+                Map.class
+            );
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                return response.getBody();
+            }
+            throw new RuntimeException("Empty response from Supabase token API");
+        } catch (Exception e) {
+            log.error("Failed Google login in Supabase: {}", e.getMessage());
+            throw new BadRequestException("Google login failed: " + e.getMessage());
+        }
     }
 
     @Transactional

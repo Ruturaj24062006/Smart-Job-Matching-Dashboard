@@ -1,7 +1,5 @@
 server:
   port: 8080
-  servlet:
-    context-path: /api/v1
 
 spring:
   application:
@@ -27,10 +25,6 @@ spring:
       url: ${REDIS_URL:redis://localhost:6379}
   rabbitmq:
     addresses: ${RABBITMQ_URL:amqp://localhost:5672}
-    host: ${RABBITMQ_HOST:localhost}
-    port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USER:guest}
-    password: ${RABBITMQ_PASSWORD:guest}
     listener:
       simple:
         retry:
