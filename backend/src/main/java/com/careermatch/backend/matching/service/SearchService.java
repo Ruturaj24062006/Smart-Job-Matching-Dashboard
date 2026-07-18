@@ -1,5 +1,6 @@
 package com.careermatch.backend.matching.service;
 
+import com.careermatch.backend.ai.service.EmbeddingService;
 import com.careermatch.backend.job.entity.Job;
 import com.careermatch.backend.job.repository.JobRepository;
 import com.careermatch.backend.resume.entity.Resume;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -21,63 +23,101 @@ public class SearchService {
 
     private final JobRepository jobRepository;
     private final ResumeRepository resumeRepository;
+    private final EmbeddingService embeddingService;
 
     /**
      * Hybrid RAG search for top matching jobs for a given student.
      *
      * Algorithm:
-     *   - Dense leg: pgvector cosine similarity on resume embedding (top-100)
+     *   - Primary: Uses successful Resume embedding vector & parsed text.
+     *   - Fallback: If resume is missing or failed parsing, generates vector directly from Student Profile.
      *   - Sparse leg: PostgreSQL tsvector BM25 full-text search (top-100)
-     *   - Fusion:     Reciprocal Rank Fusion (k=60) in SQL
-     *
-     * @param student the student to match jobs for
-     * @param limit   maximum number of candidate jobs to return (use 100 for best RRF coverage)
-     * @return ranked list of candidate Job entities
+     *   - Fusion: Reciprocal Rank Fusion (k=60) in SQL
      */
     public List<Job> searchJobsForStudent(Student student, int limit) {
         Resume resume = resumeRepository.findByStudentIdAndIsCurrentTrue(student.getId())
                 .orElse(null);
 
-        // Build a rich BM25 keyword string from multiple sources for high recall
-        String keywords = buildKeywordString(student, resume);
+        boolean isResumeValid = resume != null 
+                && "SUCCESS".equalsIgnoreCase(resume.getProcessingStatus()) 
+                && resume.getEmbedding() != null;
 
-        if (resume == null || resume.getEmbedding() == null) {
-            log.warn("No active resume or embedding found for student: {}. Falling back to FTS-only search.", student.getId());
+        float[] embeddingVector;
+        if (isResumeValid) {
+            log.info("Using primary source (Resume embedding) for student {}", student.getId());
+            embeddingVector = resume.getEmbedding();
+        } else {
+            log.warn("Resume is missing or processing failed for student {}. Using Profile fallback for vector generation.", student.getId());
+            String profileText = buildProfileText(student);
+            embeddingVector = embeddingService.generateEmbedding(profileText);
+        }
 
-            if (keywords.isBlank()) {
-                log.warn("Student {} has no skills or resume text — returning empty job list.", student.getId());
-                return Collections.emptyList();
-            }
+        // Build rich BM25 keywords combining profile and resume
+        String keywords = buildKeywordString(student, isResumeValid ? resume : null);
 
-            // Dense leg: zero vector (pgvector will still rank by BM25 via RRF)
-            float[] zeroVector = new float[384];
-            log.info("FTS-only hybrid search for student {} with keywords: '{}'", student.getId(), keywords);
-            return jobRepository.searchHybrid(zeroVector, keywords, limit);
+        if (keywords.isBlank()) {
+            log.warn("Student {} has no skills, profile, or resume text — returning empty job list.", student.getId());
+            return Collections.emptyList();
         }
 
         log.info("Performing hybrid RRF search (top {}) for student {} | keywords: '{}'",
                 limit, student.getId(), keywords);
-        return jobRepository.searchHybrid(resume.getEmbedding(), keywords, limit);
+        return jobRepository.searchHybrid(embeddingVector, keywords, limit);
     }
 
-    private static final java.util.Set<String> STOP_WORDS = java.util.Set.of(
+    private String buildProfileText(Student student) {
+        StringBuilder sb = new StringBuilder();
+        if (student.getSkills() != null && !student.getSkills().isEmpty()) {
+            sb.append("Skills: ").append(student.getSkills().stream().map(StudentSkill::getName).collect(Collectors.joining(", "))).append(". ");
+        }
+        if (student.getExperience() != null && !student.getExperience().isEmpty()) {
+            sb.append("Experience: ");
+            for (var exp : student.getExperience()) {
+                if (exp.getJobTitle() != null) sb.append(exp.getJobTitle()).append(" ");
+                if (exp.getCompany() != null) sb.append(exp.getCompany()).append(" ");
+                if (exp.getDescription() != null) sb.append(exp.getDescription()).append(". ");
+            }
+        }
+        if (student.getProjects() != null && !student.getProjects().isEmpty()) {
+            sb.append("Projects: ");
+            for (var proj : student.getProjects()) {
+                if (proj.getName() != null) sb.append(proj.getName()).append(" ");
+                if (proj.getTechnologies() != null) sb.append(proj.getTechnologies()).append(" ");
+                if (proj.getDescription() != null) sb.append(proj.getDescription()).append(". ");
+            }
+        }
+        if (student.getEducation() != null && !student.getEducation().isEmpty()) {
+            sb.append("Education: ");
+            for (var edu : student.getEducation()) {
+                if (edu.getDegree() != null) sb.append(edu.getDegree()).append(" ");
+                if (edu.getFieldOfStudy() != null) sb.append(edu.getFieldOfStudy()).append(" ");
+                if (edu.getInstitution() != null) sb.append(edu.getInstitution()).append(". ");
+            }
+        }
+        if (student.getCertifications() != null && !student.getCertifications().isEmpty()) {
+            sb.append("Certifications: ");
+            for (var cert : student.getCertifications()) {
+                if (cert.getName() != null) sb.append(cert.getName()).append(" ");
+            }
+        }
+        if (student.getCareerPreferences() != null && !student.getCareerPreferences().isBlank()) {
+            sb.append("Preferences: ").append(student.getCareerPreferences()).append(". ");
+        }
+        if (student.getBio() != null && !student.getBio().isBlank()) {
+            sb.append("Bio: ").append(student.getBio());
+        }
+        return sb.toString().trim();
+    }
+
+    private static final Set<String> STOP_WORDS = Set.of(
             "a", "an", "the", "and", "or", "in", "of", "to", "for", "with", "on", "at", "by", "from",
             "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "do", "does", "did",
             "but", "if", "not", "no", "as", "into", "like", "through", "after", "over", "between", "out",
             "this", "that", "these", "those", "my", "your", "his", "her", "its", "our", "their"
     );
 
-    /**
-     * Builds a rich BM25 query keyword string combining:
-     * 1. Skill entity names (most precise)
-     * 2. Job titles from experience (domain context)
-     * 3. Lead tokens from parsed resume text (broad recall)
-     *
-     * Tokens are deduplicated, cleaned of stop words, and joined with " OR "
-     * for disjunctive Cover Density (BM25) scoring via websearch_to_tsquery().
-     */
     private String buildKeywordString(Student student, Resume resume) {
-        java.util.Set<String> tokens = new java.util.LinkedHashSet<>();
+        Set<String> tokens = new java.util.LinkedHashSet<>();
 
         // Source 1: explicit skill tags
         if (student.getSkills() != null && !student.getSkills().isEmpty()) {
@@ -88,16 +128,36 @@ public class SearchService {
             }
         }
 
-        // Source 2: experience job titles (adds domain context like "backend", "engineer")
+        // Source 2: experience job titles & descriptions
         if (student.getExperience() != null && !student.getExperience().isEmpty()) {
             for (var exp : student.getExperience()) {
-                if (exp.getJobTitle() != null) {
-                    addCleanTokens(tokens, exp.getJobTitle());
-                }
+                if (exp.getJobTitle() != null) addCleanTokens(tokens, exp.getJobTitle());
+                if (exp.getDescription() != null) addCleanTokens(tokens, exp.getDescription());
             }
         }
 
-        // Source 3: first 512 chars of parsed resume text (highest raw recall)
+        // Source 3: projects technologies & names
+        if (student.getProjects() != null && !student.getProjects().isEmpty()) {
+            for (var proj : student.getProjects()) {
+                if (proj.getTechnologies() != null) addCleanTokens(tokens, proj.getTechnologies());
+                if (proj.getName() != null) addCleanTokens(tokens, proj.getName());
+            }
+        }
+
+        // Source 4: education degree & field of study
+        if (student.getEducation() != null && !student.getEducation().isEmpty()) {
+            for (var edu : student.getEducation()) {
+                if (edu.getFieldOfStudy() != null) addCleanTokens(tokens, edu.getFieldOfStudy());
+                if (edu.getDegree() != null) addCleanTokens(tokens, edu.getDegree());
+            }
+        }
+
+        // Source 5: career preferences
+        if (student.getCareerPreferences() != null && !student.getCareerPreferences().isBlank()) {
+            addCleanTokens(tokens, student.getCareerPreferences());
+        }
+
+        // Source 6: first 512 chars of parsed resume text (if resume parsing succeeded)
         if (resume != null && resume.getParsedText() != null && !resume.getParsedText().isBlank()) {
             String text = resume.getParsedText();
             if (text.length() > 512) {
@@ -106,7 +166,6 @@ public class SearchService {
             addCleanTokens(tokens, text);
         }
 
-        // Fallback if tokens set is empty
         if (tokens.isEmpty() && student.getBio() != null && !student.getBio().isBlank()) {
             addCleanTokens(tokens, student.getBio());
         }
@@ -116,11 +175,10 @@ public class SearchService {
             tokens.add("engineer");
         }
 
-        // Format for websearch_to_tsquery with OR operators for BM25 cover density scoring
         return String.join(" OR ", tokens);
     }
 
-    private void addCleanTokens(java.util.Set<String> set, String raw) {
+    private void addCleanTokens(Set<String> set, String raw) {
         if (raw == null || raw.isBlank()) return;
         String[] words = raw.replaceAll("[^a-zA-Z0-9 ]", " ").toLowerCase().split("\\s+");
         for (String w : words) {
@@ -131,3 +189,4 @@ public class SearchService {
         }
     }
 }
+

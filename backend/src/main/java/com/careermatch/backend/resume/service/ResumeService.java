@@ -62,9 +62,10 @@ public class ResumeService {
 
         final String parsedText = resume.getParsedText();
         if (parsedText == null || parsedText.isBlank()) {
-            log.error("[PIPELINE] Resume {} has no parsedText — PDF extraction must have failed. Marking FAILED.", resumeId);
+            log.error("[PIPELINE] Resume {} has no parsedText — PDF extraction must have failed. Marking FAILED and triggering Profile fallback matching.", resumeId);
             resume.setProcessingStatus("FAILED");
             resumeRepository.save(resume);
+            fireJobMatchingEvent(resume.getStudent().getId(), resumeId);
             return;
         }
         log.info("[PIPELINE] Resume {} parsedText length: {} chars", resumeId, parsedText.length());
@@ -111,9 +112,10 @@ public class ResumeService {
             String jsonProfile = groqFuture.get();
 
             if (jsonProfile == null || jsonProfile.isBlank() || "{}".equals(jsonProfile.trim())) {
-                log.error("[PIPELINE] Groq returned null/empty JSON for resume {}. Marking FAILED.", resumeId);
+                log.error("[PIPELINE] Groq returned null/empty JSON for resume {}. Marking FAILED and using Profile fallback.", resumeId);
                 resume.setProcessingStatus("FAILED");
                 resumeRepository.save(resume);
+                fireJobMatchingEvent(resume.getStudent().getId(), resumeId);
                 return;
             }
 
@@ -135,15 +137,16 @@ public class ResumeService {
         } catch (Exception e) {
             log.error("[PIPELINE] Critical failure processing resume {} after {} ms: {}",
                     resumeId, System.currentTimeMillis() - startProcess, e.getMessage(), e);
-            // Mark as FAILED — the frontend will show a proper error to the user.
             try {
                 resume.setProcessingStatus("FAILED");
                 resumeRepository.save(resume);
+                fireJobMatchingEvent(resume.getStudent().getId(), resumeId);
             } catch (Exception ex) {
                 log.error("[PIPELINE] Failed to persist FAILED status for resume {}: {}", resumeId, ex.getMessage());
             }
         }
     }
+
 
     /**
      * Publishes a JobMatchingRequestedEvent to RabbitMQ so the matching
