@@ -31,7 +31,7 @@ export class StudentDashboard implements OnInit, OnDestroy {
   aiSkillGap = signal<any | null>(null);
 
   // Tab & search filtering signals
-  activeTab = signal<'recommendations' | 'discover' | 'applications'>('recommendations');
+  activeTab = signal<'recommendations' | 'discover' | 'applications' | 'profile'>('recommendations');
   searchRole = signal<string>('');
   searchLocation = signal<string>('');
   filterExperience = signal<string>('');
@@ -46,6 +46,7 @@ export class StudentDashboard implements OnInit, OnDestroy {
 
   // Job Board & Bookmark signals
   selectedJobBoard = signal<string>('All Matches');
+  jobBoardsExpanded = signal<boolean>(true);
   savedJobIds = signal<Set<string>>(new Set());
 
   // Upload & Review Popup Modal signals
@@ -376,7 +377,11 @@ export class StudentDashboard implements OnInit, OnDestroy {
     this.sendQuestion(question);
   }
 
-  changeTab(tab: 'recommendations' | 'discover' | 'applications'): void {
+  changeTab(tab: 'recommendations' | 'discover' | 'applications' | 'profile'): void {
+    if (tab === 'profile') {
+      this.router.navigate(['/student/profile-review']);
+      return;
+    }
     this.activeTab.set(tab);
     if (tab === 'discover') {
       if (this.searchResults().length === 0) {
@@ -394,6 +399,10 @@ export class StudentDashboard implements OnInit, OnDestroy {
         window.history.replaceState({}, '', '/student/dashboard');
       }
     }
+  }
+
+  toggleJobBoards(): void {
+    this.jobBoardsExpanded.update(v => !v);
   }
 
   searchJobs(): void {

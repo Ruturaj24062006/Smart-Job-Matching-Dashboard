@@ -1937,6 +1937,54 @@
   background: #fef2f2;
 }
 
+/* ── Collapsible Job Boards ─────────────────────────────────────────────── */
+
+/* All Matches row: icon + label stretch, chevron pinned to right */
+.board-item-parent {
+  justify-content: flex-start;
+}
+
+.board-item-label {
+  flex: 1;
+}
+
+/* Chevron icon */
+.chevron-icon {
+  width: 15px;
+  height: 15px;
+  color: #9ca3af;
+  flex-shrink: 0;
+  transition: transform 0.25s ease, color 0.15s ease;
+  transform: rotate(0deg); /* points down = expanded */
+}
+
+/* When list is expanded, chevron points up */
+.chevron-icon.chevron-up {
+  transform: rotate(180deg);
+}
+
+.board-item.active .chevron-icon,
+.board-item:hover .chevron-icon {
+  color: #991b1b;
+}
+
+/* Collapsible container — smooth slide using max-height trick */
+.job-boards-sub-list {
+  overflow: hidden;
+  max-height: 300px;
+  transition: max-height 0.28s ease, opacity 0.2s ease;
+  opacity: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.job-boards-sub-list.collapsed {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* Bottom Pinned User Section */
 .sidebar-bottom-group {
   padding-top: 1rem;
