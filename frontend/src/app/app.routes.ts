@@ -82,6 +82,12 @@ export const routes: Routes = [
     canActivate: [authGuard, roleGuard],
     data: { roles: ['ROLE_STUDENT'] }
   },
+  {
+    path: 'student/jobs',
+    component: FindJobs,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['ROLE_STUDENT'] }
+  },
 
   // ─── Recruiter Routes ────────────────────────────────────────────────────────
   {

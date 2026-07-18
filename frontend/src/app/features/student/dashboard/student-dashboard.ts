@@ -50,12 +50,15 @@ export class StudentDashboard implements OnInit, OnDestroy {
 
   // Upload & Review Popup Modal signals
   isUploadModalOpen = signal<boolean>(false);
-  uploadStep = signal<'select' | 'uploading' | 'review'>('select');
+  uploadStep = signal<'select' | 'uploading' | 'review' | 'error'>('select');
   uploadProgress = signal<number>(0);
   uploadError = signal<string | null>(null);
   extractedData = signal<any>(null);
   currentResumeId = signal<string | null>(null);
+  processingStage = signal<string>('Uploading resume...');
+  processingEtaSecs = signal<number>(60);
   private modalPollIntervalId: any = null;
+  private etaIntervalId: any = null;
 
   // Review editable fields
   reviewRole: string = '';
@@ -120,6 +123,13 @@ export class StudentDashboard implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.updateGreeting();
+    const currentUrl = this.router.url;
+    if (currentUrl.includes('find-jobs') || currentUrl.includes('jobs') || currentUrl.includes('discover')) {
+      this.activeTab.set('discover');
+      this.searchJobs();
+    } else if (currentUrl.includes('applications')) {
+      this.activeTab.set('applications');
+    }
     this.checkProfileCompletenessAndLoad();
   }
 
@@ -162,7 +172,8 @@ export class StudentDashboard implements OnInit, OnDestroy {
   }
 
   navigateToResumeUpload(): void {
-    this.router.navigate(['/student/resume-upload']);
+    // Open the built-in upload modal instead of navigating away from the dashboard
+    this.openUploadModal();
   }
 
   private loadMockProfileAndDashboard(): void {
@@ -367,8 +378,21 @@ export class StudentDashboard implements OnInit, OnDestroy {
 
   changeTab(tab: 'recommendations' | 'discover' | 'applications'): void {
     this.activeTab.set(tab);
-    if (tab === 'discover' && this.searchResults().length === 0) {
-      this.searchJobs();
+    if (tab === 'discover') {
+      if (this.searchResults().length === 0) {
+        this.searchJobs();
+      }
+      if (typeof window !== 'undefined') {
+        window.history.replaceState({}, '', '/student/find-jobs');
+      }
+    } else if (tab === 'recommendations') {
+      if (typeof window !== 'undefined') {
+        window.history.replaceState({}, '', '/student/dashboard');
+      }
+    } else if (tab === 'applications') {
+      if (typeof window !== 'undefined') {
+        window.history.replaceState({}, '', '/student/dashboard');
+      }
     }
   }
 
@@ -551,10 +575,14 @@ export class StudentDashboard implements OnInit, OnDestroy {
     this.uploadProgress.set(0);
     this.uploadError.set(null);
     this.extractedData.set(null);
+    this.processingStage.set('Uploading resume...');
+    this.processingEtaSecs.set(60);
     this.isUploadModalOpen.set(true);
   }
 
   closeUploadModal(): void {
+    this.stopModalPolling();
+    this.stopEtaCountdown();
     this.isUploadModalOpen.set(false);
   }
 
@@ -574,30 +602,25 @@ export class StudentDashboard implements OnInit, OnDestroy {
   private startModalUpload(file: File): void {
     this.uploadError.set(null);
     this.uploadStep.set('uploading');
-    this.uploadProgress.set(10);
-
-    const progressTimer = setInterval(() => {
-      if (this.uploadProgress() < 85) {
-        this.uploadProgress.update(p => Math.min(p + 5, 85));
-      } else {
-        clearInterval(progressTimer);
-      }
-    }, 500);
+    this.uploadProgress.set(5);
+    this.processingStage.set('Uploading resume file...');
+    this.processingEtaSecs.set(75);
 
     this.profileService.uploadResume(file).subscribe({
       next: (res) => {
-        clearInterval(progressTimer);
-        this.uploadProgress.set(90);
+        this.uploadProgress.set(20);
+        this.processingStage.set('Extracting text from PDF...');
+        this.processingEtaSecs.set(65);
         if (res.data && res.data.id) {
           this.currentResumeId.set(res.data.id);
         }
-        // Start polling for AI extraction completion (backend takes 10-30s)
+        // Start polling for AI extraction completion (backend takes 10-60s)
         this.startModalPolling();
+        this.startEtaCountdown();
       },
       error: (err) => {
-        clearInterval(progressTimer);
-        this.uploadStep.set('select');
-        this.uploadError.set(err.error?.message || 'Failed to upload resume. Please try again.');
+        this.uploadStep.set('error');
+        this.uploadError.set(err.error?.message || 'Failed to upload resume. Please check the file and try again.');
       }
     });
   }
@@ -610,36 +633,65 @@ export class StudentDashboard implements OnInit, OnDestroy {
     this.modalPollIntervalId = setInterval(() => {
       attempts++;
 
+      // Update stage labels based on progress
+      if (attempts === 3) {
+        this.processingStage.set('AI parsing skills & experience...');
+        this.uploadProgress.set(40);
+      } else if (attempts === 8) {
+        this.processingStage.set('Generating candidate embedding vector...');
+        this.uploadProgress.set(60);
+      } else if (attempts === 15) {
+        this.processingStage.set('Saving profile to database...');
+        this.uploadProgress.set(80);
+      }
+
       if (attempts > maxAttempts) {
         this.stopModalPolling();
-        // Timed out — move to review anyway so user is not stuck
-        this.uploadProgress.set(100);
-        this.extractedData.set({});
-        this.uploadStep.set('review');
-        this.uploadError.set('AI processing timed out. You can still confirm and search jobs.');
+        this.stopEtaCountdown();
+        this.uploadStep.set('error');
+        this.uploadError.set(
+          'AI processing timed out after 3 minutes. The resume may be too complex or the server is busy. Please try uploading a simpler PDF or try again later.'
+        );
         return;
       }
 
       this.profileService.getLatestResume().subscribe({
         next: (res) => {
-          if (res.success && res.data && res.data.extractedJson) {
-            this.stopModalPolling();
-            const rawJson = res.data.extractedJson;
-            let parsed: any = null;
-            try {
-              parsed = typeof rawJson === 'string' ? JSON.parse(rawJson) : rawJson;
-            } catch (e) {
-              console.error('JSON parse error', e);
+          if (res.success && res.data) {
+            if (res.data.processingStatus === 'FAILED') {
+              // Real failure from backend — show actual error
+              this.stopModalPolling();
+              this.stopEtaCountdown();
+              this.uploadStep.set('error');
+              this.uploadError.set(
+                'AI could not parse your resume. This may be due to a scanned image-only PDF or unsupported formatting. Please try a text-based PDF.'
+              );
+              return;
             }
-            this.extractedData.set(parsed || {});
-            this.reviewRole = parsed?.preferredRole || parsed?.name || 'Software Engineer';
-            this.reviewCity = parsed?.location || 'Bengaluru';
-            this.reviewExperience = parsed?.experienceLevel || 'Entry-Mid';
-            this.reviewWorkMode = parsed?.workMode || 'HYBRID';
-            this.uploadProgress.set(100);
-            this.uploadStep.set('review');
+            if (res.data.extractedJson) {
+              this.stopModalPolling();
+              this.stopEtaCountdown();
+              const rawJson = res.data.extractedJson;
+              let parsed: any = null;
+              try {
+                parsed = typeof rawJson === 'string' ? JSON.parse(rawJson) : rawJson;
+              } catch (e) {
+                console.error('JSON parse error', e);
+                this.uploadStep.set('error');
+                this.uploadError.set('Failed to read extracted resume data. Please try again.');
+                return;
+              }
+              this.extractedData.set(parsed);
+              // Only use values actually extracted from the resume — no hardcoded defaults
+              this.reviewRole = parsed?.preferredRole || parsed?.currentTitle || '';
+              this.reviewCity = parsed?.location || '';
+              this.reviewExperience = parsed?.experienceLevel || '';
+              this.reviewWorkMode = parsed?.workMode || 'HYBRID';
+              this.uploadProgress.set(100);
+              this.uploadStep.set('review');
+            }
+            // else: still PROCESSING — keep polling
           }
-          // else: still PROCESSING — keep polling
         },
         error: () => {
           // Network error during poll — just keep trying
@@ -649,6 +701,20 @@ export class StudentDashboard implements OnInit, OnDestroy {
     }, 3000);
   }
 
+  private startEtaCountdown(): void {
+    this.stopEtaCountdown();
+    this.etaIntervalId = setInterval(() => {
+      this.processingEtaSecs.update(s => Math.max(0, s - 1));
+    }, 1000);
+  }
+
+  private stopEtaCountdown(): void {
+    if (this.etaIntervalId) {
+      clearInterval(this.etaIntervalId);
+      this.etaIntervalId = null;
+    }
+  }
+
   private stopModalPolling(): void {
     if (this.modalPollIntervalId) {
       clearInterval(this.modalPollIntervalId);
@@ -656,16 +722,13 @@ export class StudentDashboard implements OnInit, OnDestroy {
     }
   }
 
+
   confirmModalAndSearchJobs(): void {
     const resumeId = this.currentResumeId();
     if (resumeId) {
       this.profileService.confirmResume(resumeId).subscribe({
-        next: () => {
-          this.onConfirmSuccess();
-        },
-        error: () => {
-          this.onConfirmSuccess();
-        }
+        next: () => this.onConfirmSuccess(),
+        error: () => this.onConfirmSuccess()
       });
     } else {
       this.onConfirmSuccess();
@@ -674,8 +737,8 @@ export class StudentDashboard implements OnInit, OnDestroy {
 
   private onConfirmSuccess(): void {
     this.closeUploadModal();
-    this.activeTab.set('recommendations');
-    this.triggerMatchGeneration();
+    // Navigate to the dedicated Find Jobs page so the user can see all matches
+    this.router.navigate(['/student/find-jobs']);
   }
 
   respondToInterview(applicationId: string, response: string): void {

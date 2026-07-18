@@ -32,6 +32,13 @@ public class GroqService {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final RestTemplate restTemplate = new RestTemplate();
 
+    @jakarta.annotation.PostConstruct
+    public void init() {
+        log.info("[GROQ_INIT] API Key injected: '{}' (length: {})", 
+            (apiKey != null && apiKey.length() > 5) ? apiKey.substring(0, 5) + "..." : apiKey,
+            apiKey != null ? apiKey.length() : 0);
+    }
+
     public String extractResumeProfile(String resumeText) {
         if ("mock-groq-key".equals(apiKey) || apiKey.isBlank()) {
             log.warn("Using mock resume profile extraction because Groq API Key is not set");

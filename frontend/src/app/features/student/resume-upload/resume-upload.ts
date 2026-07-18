@@ -154,7 +154,7 @@ export class ResumeUpload implements OnInit, OnDestroy {
             this.status.set('success');
             this.successMessage.set('AI successfully extracted your profile details!');
             setTimeout(() => {
-              this.router.navigate(['/student/profile-review']);
+              this.router.navigate(['/student/dashboard']);
             }, 1500);
           } else if (state === 'FAILED') {
             this.stopPolling();
