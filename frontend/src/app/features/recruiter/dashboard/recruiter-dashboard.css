@@ -837,3 +837,225 @@
 .status-interview { background: rgba(30, 142, 62, 0.1); color: #1e8e3e; }
 .status-selected { background: rgba(30, 142, 62, 0.12); color: #137333; }
 .status-rejected { background: rgba(197, 34, 31, 0.1); color: #c5221f; }
+
+/* ═══════════════════════════════ REAL-TIME GRAPHS & 8-STATS GRID ═══════════════════════════════ */
+.dashboard-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.dashboard-graphs-row {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.graph-card {
+  flex: 1;
+  min-width: 420px;
+  padding: 1.75rem 2rem;
+  background: white;
+  border-radius: 16px;
+  border: 1px solid rgba(118, 38, 22, 0.06);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+}
+
+.graph-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-dark);
+  margin-bottom: 1.5rem;
+  border-left: 3px solid var(--primary-color);
+  padding-left: 0.75rem;
+}
+
+.graph-container {
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.graph-placeholder {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+  padding: 2rem;
+}
+
+/* Time Series Bar Chart */
+.time-bars-wrapper {
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+  height: 160px;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.03);
+  padding-bottom: 8px;
+}
+
+.time-bar-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.time-bar-fill {
+  width: 24px;
+  background: linear-gradient(180deg, var(--primary-color) 0%, #dc4d35 100%);
+  border-radius: 4px 4px 0 0;
+  transition: height 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+
+.time-bar-fill:hover {
+  filter: brightness(1.1);
+}
+
+.time-bar-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+/* Horizontal Lists (Status, Skills, Distribution) */
+.status-list, .skills-list, .dist-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.88rem;
+}
+
+.status-item, .skill-row, .dist-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.status-name, .skill-name, .dist-label {
+  width: 140px;
+  color: var(--text-dark);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.skill-rank {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--primary-color);
+  width: 25px;
+}
+
+.status-bar-bg, .skill-bar-bg, .dist-bar-bg {
+  flex: 1;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.status-bar-fill, .skill-bar-fill, .dist-bar-fill {
+  height: 100%;
+  background: var(--primary-color);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+.status-bar-fill {
+  background: #4285f4;
+}
+
+.dist-bar-fill {
+  background: #1e8e3e;
+}
+
+.status-val, .skill-count, .dist-val {
+  width: 90px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+/* Bottom Grid layout */
+.dashboard-bottom-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+/* Activity Feed timeline */
+.activity-card {
+  padding: 2rem;
+  background: white;
+  border-radius: 16px;
+  border: 1px solid rgba(118, 38, 22, 0.06);
+}
+
+.activity-feed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+}
+
+.activity-feed-item {
+  display: flex;
+  gap: 1rem;
+  position: relative;
+}
+
+.activity-feed-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 1.25rem;
+  left: 6px;
+  width: 1px;
+  height: calc(100% - 0.5rem);
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.activity-icon {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  line-height: 1;
+  margin-top: 4px;
+  flex-shrink: 0;
+  z-index: 2;
+}
+
+.activity-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.activity-text {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  line-height: 1.4;
+}
+
+.activity-time {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+

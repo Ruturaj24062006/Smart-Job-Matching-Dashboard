@@ -21,6 +21,23 @@ export class RecruiterDashboard implements OnInit {
   recentApplications = signal<any[]>([]);
   isLoadingStats = signal<boolean>(false);
 
+  // Real-Time Computed Stats
+  allCompanyApplications = signal<any[]>([]);
+  totalJobsCount = signal<number>(0);
+  activeJobsCount = signal<number>(0);
+  closedJobsCount = signal<number>(0);
+  recommendedCandidatesCount = signal<number>(0);
+  interviewsScheduledCount = signal<number>(0);
+  offersSentCount = signal<number>(0);
+  hiringSuccessRate = signal<number>(0);
+
+  // Real-Time Graph Data
+  applicationsOverTime = signal<{ date: string, count: number }[]>([]);
+  applicationsByStatus = signal<{ status: string, count: number, percent: number }[]>([]);
+  topSkillsRequested = signal<{ skill: string, count: number }[]>([]);
+  matchDistribution = signal<{ range: string, count: number, percent: number }[]>([]);
+  recentActivitiesList = signal<{ text: string, time: Date }[]>([]);
+
   // Layout Tab System
   activeMenu = signal<string>('dashboard');
   expandedMenus = signal<Record<string, boolean>>({
@@ -170,6 +187,43 @@ export class RecruiterDashboard implements OnInit {
               this.loadFilteredApplications();
             }
           }
+
+          // Compile real-time stats and metrics from all jobs
+          const jobIds = res.data.map((j: any) => j.id);
+          this.totalJobsCount.set(jobIds.length);
+          this.activeJobsCount.set(res.data.filter((j: any) => j.status === 'ACTIVE').length);
+          this.closedJobsCount.set(res.data.filter((j: any) => j.status === 'CLOSED').length);
+
+          let loadedCount = 0;
+          const allApps: any[] = [];
+          
+          if (jobIds.length === 0) {
+            this.allCompanyApplications.set([]);
+            this.calculateMetricsAndGraphs([]);
+            return;
+          }
+
+          jobIds.forEach((jobId: string) => {
+            this.applicationsService.getJobApplications(jobId).subscribe({
+              next: (appRes) => {
+                loadedCount++;
+                if (appRes.success && Array.isArray(appRes.data)) {
+                  allApps.push(...appRes.data);
+                }
+                if (loadedCount === jobIds.length) {
+                  this.allCompanyApplications.set(allApps);
+                  this.calculateMetricsAndGraphs(allApps);
+                }
+              },
+              error: () => {
+                loadedCount++;
+                if (loadedCount === jobIds.length) {
+                  this.allCompanyApplications.set(allApps);
+                  this.calculateMetricsAndGraphs(allApps);
+                }
+              }
+            });
+          });
         }
       },
       error: (err) => {
@@ -177,6 +231,99 @@ export class RecruiterDashboard implements OnInit {
         console.error('Error loading jobs:', err);
       }
     });
+  }
+
+  calculateMetricsAndGraphs(apps: any[]): void {
+    // 1. Recommended Candidates Count (Match Score >= 70%)
+    const recommended = apps.filter(a => (a.matchScore || 0) >= 70).length;
+    // 2. Interviews Scheduled (Status = INTERVIEW)
+    const interviews = apps.filter(a => a.status === 'INTERVIEW').length;
+    // 3. Offers Sent (Status = OFFER or ACCEPTED)
+    const offers = apps.filter(a => a.status === 'OFFER' || a.status === 'ACCEPTED').length;
+
+    this.recommendedCandidatesCount.set(recommended);
+    this.interviewsScheduledCount.set(interviews);
+    this.offersSentCount.set(offers);
+
+    // 4. Hiring Success Rate (Offers / Total Applications)
+    const rate = apps.length > 0 ? Math.round((offers / apps.length) * 100) : 0;
+    this.hiringSuccessRate.set(rate);
+
+    // 5. Applications over Time (group by date)
+    const timeMap: Record<string, number> = {};
+    apps.forEach(a => {
+      if (a.createdAt) {
+        const d = new Date(a.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        timeMap[d] = (timeMap[d] || 0) + 1;
+      }
+    });
+    const overTime = Object.keys(timeMap).map(k => ({ date: k, count: timeMap[k] }));
+    this.applicationsOverTime.set(overTime.slice(-7));
+
+    // 6. Applications by Status
+    const statusMap: Record<string, number> = {};
+    apps.forEach(a => {
+      const s = this.getStatusLabel(a.status);
+      statusMap[s] = (statusMap[s] || 0) + 1;
+    });
+    const byStatus = Object.keys(statusMap).map(k => ({
+      status: k,
+      count: statusMap[k],
+      percent: apps.length > 0 ? Math.round((statusMap[k] / apps.length) * 100) : 0
+    }));
+    this.applicationsByStatus.set(byStatus);
+
+    // 7. Top Skills Requested (based on active jobs list)
+    const skillMap: Record<string, number> = {};
+    this.myJobs().forEach(j => {
+      if (j.requiredSkills) {
+        j.requiredSkills.split(',').forEach((s: string) => {
+          const trimmed = s.trim();
+          if (trimmed) {
+            skillMap[trimmed] = (skillMap[trimmed] || 0) + 1;
+          }
+        });
+      }
+    });
+    const skills = Object.keys(skillMap)
+      .map(k => ({ skill: k, count: skillMap[k] }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+    this.topSkillsRequested.set(skills);
+
+    // 8. Candidate Match Score Distribution (High >= 80%, Mid 60-79%, Low < 60%)
+    let high = 0, mid = 0, low = 0;
+    apps.forEach(a => {
+      const score = a.matchScore || 0;
+      if (score >= 80) high++;
+      else if (score >= 60) mid++;
+      else low++;
+    });
+    const dist = [
+      { range: 'High Match (80-100%)', count: high, percent: apps.length > 0 ? Math.round((high / apps.length) * 100) : 0 },
+      { range: 'Mid Match (60-79%)', count: mid, percent: apps.length > 0 ? Math.round((mid / apps.length) * 100) : 0 },
+      { range: 'Low Match (<60%)', count: low, percent: apps.length > 0 ? Math.round((low / apps.length) * 100) : 0 }
+    ];
+    this.matchDistribution.set(dist);
+
+    // 9. Recent Activity Feed
+    const activities: { text: string, time: Date }[] = [];
+    const sortedApps = [...apps].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    sortedApps.slice(0, 5).forEach(a => {
+      activities.push({
+        text: `New application: ${a.studentName} for '${a.jobTitle}' (Fit: ${a.matchScore || 0}%)`,
+        time: new Date(a.createdAt)
+      });
+    });
+    this.myJobs().forEach(j => {
+      if (j.createdAt) {
+        activities.push({
+          text: `Job posted: '${j.title}' at ${j.location}`,
+          time: new Date(j.createdAt)
+        });
+      }
+    });
+    this.recentActivitiesList.set(activities.sort((a, b) => b.time.getTime() - a.time.getTime()).slice(0, 6));
   }
 
   // Sidebar Menu Actions

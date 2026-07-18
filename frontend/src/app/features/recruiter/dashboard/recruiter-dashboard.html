@@ -109,72 +109,164 @@
       </div>
 
       <!-- Stats Counters Grid -->
-      <div class="stats-grid animate-fade-in" *ngIf="stats()">
+      <div class="dashboard-stats-grid animate-fade-in">
         <div class="stat-card glass-card" (click)="selectMenu('all-jobs')">
-          <div class="stat-icon-wrapper active-jobs-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-          </div>
           <div class="stat-info">
-            <span class="stat-number">{{ stats().activeJobs }}</span>
+            <span class="stat-number">{{ totalJobsCount() }}</span>
+            <span class="stat-label">Total Jobs</span>
+          </div>
+        </div>
+        <div class="stat-card glass-card" (click)="selectMenu('all-jobs')">
+          <div class="stat-info">
+            <span class="stat-number">{{ activeJobsCount() }}</span>
             <span class="stat-label">Active Jobs</span>
           </div>
         </div>
-
-        <div class="stat-card glass-card" (click)="selectMenu('applications-new')">
-          <div class="stat-icon-wrapper total-apps-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
-          </div>
+        <div class="stat-card glass-card" (click)="selectMenu('all-jobs')">
           <div class="stat-info">
-            <span class="stat-number">{{ stats().totalApplications }}</span>
+            <span class="stat-number">{{ closedJobsCount() }}</span>
+            <span class="stat-label">Closed Jobs</span>
+          </div>
+        </div>
+        <div class="stat-card glass-card" (click)="selectMenu('applications-new')">
+          <div class="stat-info">
+            <span class="stat-number">{{ allCompanyApplications().length }}</span>
             <span class="stat-label">Total Applications</span>
           </div>
         </div>
-
-        <div class="stat-card glass-card" (click)="selectMenu('matching-shortlist')">
-          <div class="stat-icon-wrapper shortlisted-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-          </div>
+        <div class="stat-card glass-card" (click)="selectMenu('matching-recommended')">
           <div class="stat-info">
-            <span class="stat-number">{{ stats().shortlisted }}</span>
-            <span class="stat-label">Shortlisted</span>
+            <span class="stat-number">{{ recommendedCandidatesCount() }}</span>
+            <span class="stat-label">Recommended Candidates</span>
           </div>
         </div>
-
         <div class="stat-card glass-card" (click)="selectMenu('applications-interview')">
-          <div class="stat-icon-wrapper interviews-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-          </div>
           <div class="stat-info">
-            <span class="stat-number">{{ stats().interviews }}</span>
-            <span class="stat-label">Interviews</span>
+            <span class="stat-number">{{ interviewsScheduledCount() }}</span>
+            <span class="stat-label">Interviews Scheduled</span>
+          </div>
+        </div>
+        <div class="stat-card glass-card" (click)="selectMenu('applications-selected')">
+          <div class="stat-info">
+            <span class="stat-number">{{ offersSentCount() }}</span>
+            <span class="stat-label">Offers Sent</span>
+          </div>
+        </div>
+        <div class="stat-card glass-card">
+          <div class="stat-info">
+            <span class="stat-number">{{ hiringSuccessRate() }}%</span>
+            <span class="stat-label">Hiring Success Rate</span>
           </div>
         </div>
       </div>
 
-      <div class="stats-loading-row" *ngIf="isLoadingStats()">
-        <div class="spinner-loader"></div>
-        <span>Syncing metrics...</span>
+      <!-- Dashboard Graphs & Analytics -->
+      <div class="dashboard-graphs-row animate-fade-in">
+        <!-- 1. Applications over Time -->
+        <div class="glass-card graph-card">
+          <h3 class="graph-title">Applications over Time</h3>
+          <div class="graph-container time-graph">
+            <div *ngIf="applicationsOverTime().length === 0" class="graph-placeholder">No application date records yet.</div>
+            <div class="time-bars-wrapper" *ngIf="applicationsOverTime().length > 0">
+              <div class="time-bar-column" *ngFor="let item of applicationsOverTime()">
+                <div class="time-bar-fill" [style.height.%]="(item.count * 15)" [title]="item.count + ' applications'"></div>
+                <span class="time-bar-label">{{ item.date }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Applications by Status -->
+        <div class="glass-card graph-card">
+          <h3 class="graph-title">Applications by Status</h3>
+          <div class="graph-container status-graph">
+            <div *ngIf="applicationsByStatus().length === 0" class="graph-placeholder">No applications submitted yet.</div>
+            <div class="status-list" *ngIf="applicationsByStatus().length > 0">
+              <div class="status-item" *ngFor="let item of applicationsByStatus()">
+                <span class="status-name">{{ item.status }}</span>
+                <div class="status-bar-bg">
+                  <div class="status-bar-fill" [style.width.%]="item.percent"></div>
+                </div>
+                <span class="status-val">{{ item.count }} ({{ item.percent }}%)</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <!-- Recent applications table -->
-      <div class="recent-apps-section" *ngIf="profile && stats()">
+      <div class="dashboard-graphs-row animate-fade-in">
+        <!-- 3. Top Skills Requested -->
+        <div class="glass-card graph-card">
+          <h3 class="graph-title">Top Skills Requested</h3>
+          <div class="graph-container skills-graph">
+            <div *ngIf="topSkillsRequested().length === 0" class="graph-placeholder">No skill tags listed in active job posts.</div>
+            <div class="skills-list" *ngIf="topSkillsRequested().length > 0">
+              <div class="skill-row" *ngFor="let s of topSkillsRequested(); let i = index">
+                <span class="skill-rank">#{{ i + 1 }}</span>
+                <span class="skill-name">{{ s.skill }}</span>
+                <div class="skill-bar-bg">
+                  <div class="skill-bar-fill" [style.width.%]="(s.count * 20)"></div>
+                </div>
+                <span class="skill-count">{{ s.count }} jobs</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Candidate Match Distribution -->
+        <div class="glass-card graph-card">
+          <h3 class="graph-title">Candidate Match Distribution</h3>
+          <div class="graph-container dist-graph">
+            <div *ngIf="matchDistribution().length === 0" class="graph-placeholder">No match scores generated yet.</div>
+            <div class="dist-list" *ngIf="matchDistribution().length > 0">
+              <div class="dist-item" *ngFor="let item of matchDistribution()">
+                <span class="dist-label">{{ item.range }}</span>
+                <div class="dist-bar-bg">
+                  <div class="dist-bar-fill" [style.width.%]="item.percent"></div>
+                </div>
+                <span class="dist-val">{{ item.count }} ({{ item.percent }}%)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Section: Recent Activity + Recent Applications -->
+      <div class="dashboard-bottom-grid animate-fade-in">
+        <!-- Column 1: Recent Activity Feed -->
+        <div class="glass-card activity-card">
+          <h3 class="card-section-title">Recent Activity</h3>
+          <div *ngIf="recentActivitiesList().length === 0" class="empty-apps-box">
+            <p>No recent actions logged.</p>
+          </div>
+          <div class="activity-feed-list" *ngIf="recentActivitiesList().length > 0">
+            <div class="activity-feed-item" *ngFor="let act of recentActivitiesList()">
+              <div class="activity-icon">&#8226;</div>
+              <div class="activity-info">
+                <p class="activity-text">{{ act.text }}</p>
+                <span class="activity-time">{{ act.time | date:'shortTime' }} on {{ act.time | date:'mediumDate' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Column 2: Recent Applications -->
         <div class="glass-card recent-apps-card">
           <h3 class="card-section-title">Recent Applications</h3>
           <div *ngIf="recentApplications().length === 0" class="empty-apps-box">
-            <p>No recent applications received yet. Post new jobs to start matching candidates.</p>
+            <p>No applications received yet. Post jobs to start receiving candidates.</p>
           </div>
-
           <div class="recent-apps-list" *ngIf="recentApplications().length > 0">
             <div class="app-row-header">
               <span>Candidate</span>
               <span>Job Title</span>
-              <span>Applied On</span>
-              <span>Current Status</span>
+              <span>Applied</span>
+              <span>Status</span>
             </div>
             <div class="app-row" *ngFor="let app of recentApplications()">
               <span class="app-candidate-name">{{ app.studentName }}</span>
               <span class="app-job-title-cell">{{ app.jobTitle }}</span>
-              <span class="app-date-cell">{{ app.createdAt | date:'mediumDate' }}</span>
+              <span class="app-date-cell">{{ app.createdAt | date:'shortDate' }}</span>
               <span class="app-status-pill" [ngClass]="getStatusClass(app.status)">{{ getStatusLabel(app.status) }}</span>
             </div>
           </div>
