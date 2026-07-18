@@ -8,16 +8,23 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
   const router = inject(Router);
   
+  // Dynamically rewrite localhost backend URL to Render backend in production
+  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  let targetUrl = req.url;
+  if (!isLocalhost && req.url.startsWith('http://localhost:8080')) {
+    targetUrl = req.url.replace('http://localhost:8080', 'https://nexus-backend-56gy.onrender.com');
+  }
+
+  let authReq = req.clone({ url: targetUrl });
+  
   // Skip adding token to auth endpoints
-  if (req.url.includes('/api/v1/auth/')) {
-    return next(req);
+  if (targetUrl.includes('/api/v1/auth/')) {
+    return next(authReq);
   }
 
   const token = authService.getAccessToken();
-  let authReq = req;
-  
   if (token) {
-    authReq = req.clone({
+    authReq = authReq.clone({
       setHeaders: {
         Authorization: `Bearer ${token}`
       }

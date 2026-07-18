@@ -275,11 +275,20 @@
       <div class="glass-card job-form-card">
         <!-- Progress Steps -->
         <div class="step-indicator-row">
-          <div class="step-bubble" [class.active]="jobStep() >= 1">1<span>Role Details</span></div>
+          <div class="step-bubble" [class.active]="jobStep() >= 1">
+            <div class="step-number">1</div>
+            <span>Role Details</span>
+          </div>
           <div class="step-line" [class.filled]="jobStep() >= 2"></div>
-          <div class="step-bubble" [class.active]="jobStep() >= 2">2<span>Requirements</span></div>
+          <div class="step-bubble" [class.active]="jobStep() >= 2">
+            <div class="step-number">2</div>
+            <span>Requirements</span>
+          </div>
           <div class="step-line" [class.filled]="jobStep() >= 3"></div>
-          <div class="step-bubble" [class.active]="jobStep() >= 3">3<span>Settings</span></div>
+          <div class="step-bubble" [class.active]="jobStep() >= 3">
+            <div class="step-number">3</div>
+            <span>Settings</span>
+          </div>
         </div>
 
         <!-- Alert messages -->
