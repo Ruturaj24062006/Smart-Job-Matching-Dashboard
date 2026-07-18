@@ -10,6 +10,7 @@ import { StudentDashboard } from './features/student/dashboard/student-dashboard
 import { Onboarding } from './features/student/onboarding/onboarding';
 import { ResumeUpload } from './features/student/resume-upload/resume-upload';
 import { ProfileReview } from './features/student/profile-review/profile-review';
+import { FindJobs } from './features/student/find-jobs/find-jobs';
 import { RecruiterDashboard } from './features/recruiter/dashboard/recruiter-dashboard';
 import { RecruiterOnboarding } from './features/recruiter/onboarding/onboarding';
 import { CreateJob } from './features/recruiter/create-job/create-job';
@@ -72,6 +73,12 @@ export const routes: Routes = [
   {
     path: 'student/profile-review',
     component: ProfileReview,
+    canActivate: [authGuard, roleGuard],
+    data: { roles: ['ROLE_STUDENT'] }
+  },
+  {
+    path: 'student/find-jobs',
+    component: FindJobs,
     canActivate: [authGuard, roleGuard],
     data: { roles: ['ROLE_STUDENT'] }
   },

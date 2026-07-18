@@ -9,6 +9,7 @@
       <a routerLink="/" fragment="how-it-works" class="nav-link">How It Works</a>
       <a routerLink="/" fragment="pricing" class="nav-link">Pricing</a>
       
+      <a *ngIf="isLoggedIn() && isStudent()" routerLink="/student/find-jobs" class="nav-link">Find & Search Jobs</a>
       <!-- Unauthenticated Login Link -->
       <a *ngIf="!isLoggedIn()" routerLink="/login" class="nav-link">Log In</a>
       <!-- Authenticated Logout Link -->

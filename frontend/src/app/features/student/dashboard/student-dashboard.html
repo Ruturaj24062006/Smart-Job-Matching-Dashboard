@@ -96,12 +96,12 @@
             <span>EXPLORE & SETTINGS</span>
           </div>
           <ul class="nav-links-list">
-            <li class="nav-link-item" [class.active]="activeTab() === 'discover'" (click)="changeTab('discover')">
+            <li class="nav-link-item" (click)="router.navigate(['/student/find-jobs'])">
               <svg class="nav-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="10"/>
                 <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
               </svg>
-              <span>History / Discover</span>
+              <span>Find & Search Jobs</span>
             </li>
             <li class="nav-link-item" (click)="changeTab('recommendations')">
               <svg class="nav-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
