@@ -53,12 +53,16 @@ public class ResumeController {
     @PreAuthorize("hasAuthority('ROLE_STUDENT')")
     @Operation(summary = "Upload resume PDF/DOC/DOCX and trigger background parsing pipeline")
     public ResponseEntity<ApiResponse<ResumeResponse>> uploadResume(@RequestParam("file") MultipartFile file) {
+        String origName = file.getOriginalFilename();
         String contentType = file.getContentType();
-        boolean isValidType = MediaType.APPLICATION_PDF_VALUE.equals(contentType) ||
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document".equals(contentType) ||
-                "application/msword".equals(contentType);
 
-        if (file.isEmpty() || !isValidType) {
+        boolean isPdf = (contentType != null && contentType.toLowerCase().contains("pdf")) ||
+                (origName != null && origName.toLowerCase().endsWith(".pdf"));
+
+        boolean isDoc = (contentType != null && (contentType.toLowerCase().contains("word") || contentType.toLowerCase().contains("officedocument") || contentType.toLowerCase().contains("msword"))) ||
+                (origName != null && (origName.toLowerCase().endsWith(".docx") || origName.toLowerCase().endsWith(".doc")));
+
+        if (file.isEmpty() || (!isPdf && !isDoc)) {
             throw new BadRequestException("Please upload a valid PDF or Word Document (.docx, .doc)");
         }
 
@@ -67,7 +71,15 @@ public class ResumeController {
                 .orElseThrow(() -> new BadRequestException("Logged-in user not found"));
 
         Student student = studentRepository.findById(user.getId())
-                .orElseThrow(() -> new BadRequestException("Student profile not initialized"));
+                .orElseGet(() -> {
+                    Student newStudent = Student.builder()
+                            .user(user)
+                            .firstName(email.contains("@") ? email.split("@")[0] : "Student")
+                            .lastName("")
+                            .profileCompletedPct(0)
+                            .build();
+                    return studentRepository.save(newStudent);
+                });
 
         try {
             // 1. Upload to local disk

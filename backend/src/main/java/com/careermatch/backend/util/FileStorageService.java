@@ -36,7 +36,10 @@ public class FileStorageService {
     }
 
     public String storeFile(MultipartFile file) throws IOException {
-        String filename = UUID.randomUUID() + "-" + file.getOriginalFilename();
+        String originalName = file.getOriginalFilename() != null 
+                ? file.getOriginalFilename().replaceAll("[^a-zA-Z0-9\\._-]", "_") 
+                : "resume.pdf";
+        String filename = UUID.randomUUID() + "-" + originalName;
         Path targetLocation = this.rootDir.resolve(filename);
         
         try (InputStream inputStream = file.getInputStream()) {

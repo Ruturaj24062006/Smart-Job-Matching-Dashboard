@@ -89,13 +89,17 @@ export class ResumeUpload implements OnInit, OnDestroy {
       return;
     }
 
-    // 2. Validation: Content Type
+    // 2. Validation: Content Type or Extension
     const allowedTypes = [
       'application/pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/msword'
     ];
-    if (!allowedTypes.includes(file.type)) {
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    const isValidExt = ['pdf', 'docx', 'doc'].includes(ext || '');
+    const isValidMime = allowedTypes.includes(file.type);
+
+    if (!isValidMime && !isValidExt) {
       this.errorMessage.set('Supported formats: PDF, DOCX, DOC.');
       return;
     }
