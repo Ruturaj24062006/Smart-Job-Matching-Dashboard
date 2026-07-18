@@ -51,10 +51,15 @@ public class ResumeController {
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAuthority('ROLE_STUDENT')")
-    @Operation(summary = "Upload resume PDF and trigger background parsing pipeline")
+    @Operation(summary = "Upload resume PDF/DOC/DOCX and trigger background parsing pipeline")
     public ResponseEntity<ApiResponse<ResumeResponse>> uploadResume(@RequestParam("file") MultipartFile file) {
-        if (file.isEmpty() || !MediaType.APPLICATION_PDF_VALUE.equals(file.getContentType())) {
-            throw new BadRequestException("Please upload a valid PDF file");
+        String contentType = file.getContentType();
+        boolean isValidType = MediaType.APPLICATION_PDF_VALUE.equals(contentType) ||
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document".equals(contentType) ||
+                "application/msword".equals(contentType);
+
+        if (file.isEmpty() || !isValidType) {
+            throw new BadRequestException("Please upload a valid PDF or Word Document (.docx, .doc)");
         }
 
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -74,6 +79,7 @@ public class ResumeController {
                     .student(student)
                     .fileUrl(fileUrl)
                     .isCurrent(true)
+                    .processingStatus("PROCESSING")
                     .build();
             
             Resume saved = resumeRepository.save(resume);
@@ -92,6 +98,7 @@ public class ResumeController {
                     .id(saved.getId())
                     .fileUrl(saved.getFileUrl())
                     .isCurrent(saved.isCurrent())
+                    .processingStatus(saved.getProcessingStatus())
                     .createdAt(LocalDateTime.now())
                     .build();
 
@@ -135,10 +142,29 @@ public class ResumeController {
                 .isCurrent(resume.isCurrent())
                 .parsedText(resume.getParsedText())
                 .extractedJson(resume.getExtractedJson())
+                .processingStatus(resume.getProcessingStatus())
                 .createdAt(resume.getCreatedAt())
                 .build();
 
         return ResponseEntity.ok(ApiResponse.success("Latest resume parsed state retrieved successfully.", response));
+    }
+
+    @GetMapping("/status")
+    @PreAuthorize("hasAuthority('ROLE_STUDENT')")
+    @Operation(summary = "Get the processing status of the student's latest uploaded resume")
+    public ResponseEntity<ApiResponse<String>> getResumeStatus() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BadRequestException("Logged-in user not found"));
+
+        java.util.Optional<Resume> resumeOpt = resumeRepository.findByStudentIdAndIsCurrentTrue(user.getId());
+        if (resumeOpt.isEmpty()) {
+            return ResponseEntity.ok(ApiResponse.success("Status retrieved successfully", "NOT_UPLOADED"));
+        }
+
+        Resume resume = resumeOpt.get();
+        String status = resume.getProcessingStatus() != null ? resume.getProcessingStatus() : "PROCESSING";
+        return ResponseEntity.ok(ApiResponse.success("Status retrieved successfully", status));
     }
 
     @PostMapping("/{resumeId}/confirm")

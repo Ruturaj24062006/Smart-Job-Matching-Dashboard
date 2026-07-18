@@ -122,7 +122,7 @@ export class StudentDashboard implements OnInit {
           const profileData = res.data;
           this.profile.set(profileData);
           if (profileData.profileCompletedPct < 85) {
-            this.router.navigate(['/student/onboarding']);
+            this.router.navigate(['/student/resume-upload']);
           } else {
             // Profile is complete, load dashboard metrics
             this.loadDashboardData();

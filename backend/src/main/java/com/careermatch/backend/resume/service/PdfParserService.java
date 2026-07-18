@@ -17,7 +17,7 @@ public class PdfParserService {
 
     public String parsePdf(InputStream inputStream) throws IOException {
         // Copy stream to a temp file
-        Path tempFile = Files.createTempFile("resume-", ".pdf");
+        Path tempFile = Files.createTempFile("resume-", ".tmp");
         try (OutputStream out = Files.newOutputStream(tempFile)) {
             inputStream.transferTo(out);
         }

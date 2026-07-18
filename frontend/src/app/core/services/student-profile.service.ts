@@ -81,4 +81,8 @@ export class StudentProfileService {
   confirmResume(resumeId: string): Observable<any> {
     return this.http.post<any>(`${this.resumeUrl}/${resumeId}/confirm`, {});
   }
+
+  getResumeStatus(): Observable<any> {
+    return this.http.get<any>(`${this.resumeUrl}/status`);
+  }
 }

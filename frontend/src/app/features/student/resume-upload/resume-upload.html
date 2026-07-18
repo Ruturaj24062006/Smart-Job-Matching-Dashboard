@@ -1,0 +1,114 @@
+<app-navbar></app-navbar>
+
+<div class="auth-wrapper onboarding-layout">
+  <div class="onboarding-container">
+    
+    <div class="onboarding-header">
+      <div class="brand-logo"><a href="/">NEXUS</a></div>
+      <h2 class="auth-title">Upload Your Resume</h2>
+      <p class="auth-subtitle">Let NEXUS AI parse your profile and find matching jobs instantly.</p>
+    </div>
+
+    <!-- Error/Success Banners -->
+    <div *ngIf="errorMessage()" class="alert alert-error animate-fade-in">
+      {{ errorMessage() }}
+      <button (click)="reset()" class="btn btn-secondary btn-sm" style="margin-left: 10px; padding: 2px 8px;">Try Again</button>
+    </div>
+    <div *ngIf="successMessage()" class="alert alert-success animate-fade-in">
+      {{ successMessage() }}
+    </div>
+
+    <div class="onboarding-card">
+      
+      <!-- IDLE STATE: Drag & Drop Zone -->
+      <div *ngIf="status() === 'idle'" 
+           class="upload-dropzone" 
+           [class.dragging]="isDragging()"
+           (dragover)="onDragOver($event)"
+           (dragleave)="onDragLeave($event)"
+           (drop)="onDrop($event)">
+        
+        <div class="upload-icon-container">
+          <svg class="upload-svg" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+          </svg>
+        </div>
+
+        <h3 class="upload-title">Drag & Drop your resume here</h3>
+        <p class="upload-subtitle">Supported formats: PDF, DOCX, DOC (Max 10MB)</p>
+        
+        <div class="upload-divider">
+          <span>or</span>
+        </div>
+
+        <label for="resumeFile" class="btn btn-primary browse-btn">
+          Browse File
+          <input type="file" id="resumeFile" (change)="onFileSelected($event)" accept=".pdf,.docx,.doc" style="display: none;">
+        </label>
+      </div>
+
+      <!-- UPLOADING STATE -->
+      <div *ngIf="status() === 'uploading'" class="loading-state animate-fade-in">
+        <div class="progress-ring-container">
+          <div class="loading-spinner"></div>
+          <span class="progress-pct">{{ uploadProgress() }}%</span>
+        </div>
+        <h3 class="loading-title">Uploading Resume...</h3>
+        <p class="loading-subtitle">Sending document to the secure parsing engine.</p>
+      </div>
+
+      <!-- PROCESSING STATE (AI EXTRACTION) -->
+      <div *ngIf="status() === 'processing'" class="loading-state animate-fade-in">
+        <div class="ai-processing-visual">
+          <div class="pulse-ring ring-1"></div>
+          <div class="pulse-ring ring-2"></div>
+          <div class="ai-icon-center">🤖</div>
+        </div>
+        <h3 class="loading-title">AI is extracting your profile...</h3>
+        <p class="loading-subtitle">This takes about 10-15 seconds. We are scanning skills, experiences, and education.</p>
+        
+        <!-- Status Stepper Simulation -->
+        <div class="extraction-stepper">
+          <div class="step-item active">
+            <span class="step-bullet">✓</span>
+            <span class="step-text">Resume parsed successfully</span>
+          </div>
+          <div class="step-item active">
+            <span class="step-bullet">✓</span>
+            <span class="step-text">Generating vector embedding</span>
+          </div>
+          <div class="step-item running">
+            <span class="step-bullet-spinner"></span>
+            <span class="step-text">Extracting profile details via LLM...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUCCESS STATE -->
+      <div *ngIf="status() === 'success'" class="success-state animate-fade-in">
+        <div class="success-checkmark">
+          <div class="check-icon">
+            <span class="icon-line line-tip"></span>
+            <span class="icon-line line-long"></span>
+            <div class="icon-circle"></div>
+            <div class="icon-fix"></div>
+          </div>
+        </div>
+        <h3 class="loading-title">Extraction Complete!</h3>
+        <p class="loading-subtitle">Redirecting to profile review...</p>
+      </div>
+
+      <!-- ERROR STATE -->
+      <div *ngIf="status() === 'error'" class="error-state animate-fade-in">
+        <div class="error-cross">❌</div>
+        <h3 class="loading-title">Processing Failed</h3>
+        <p class="loading-subtitle">{{ errorMessage() || 'An error occurred during resume processing.' }}</p>
+        <button (click)="reset()" class="btn btn-primary" style="margin-top: 1.5rem;">Try Again</button>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<app-footer></app-footer>

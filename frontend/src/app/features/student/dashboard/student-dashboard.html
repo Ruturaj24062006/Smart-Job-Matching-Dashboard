@@ -95,13 +95,24 @@
       <div class="recommendations-grid" *ngIf="matches().length > 0">
         <div *ngFor="let m of matches()" class="job-recommendation-card glass-card" (click)="viewMatchDetails(m.id)">
           <div class="job-card-top">
-            <div class="job-title-group">
-              <h3 class="job-card-title">{{ m.jobTitle }}</h3>
-              <p class="job-card-company">{{ m.companyName }}</p>
+            <div class="job-card-logo-row">
+              <div class="company-logo-avatar">
+                {{ m.companyName ? m.companyName.substring(0, 1) : 'J' }}
+              </div>
+              <div class="job-title-group">
+                <h3 class="job-card-title">{{ m.jobTitle }}</h3>
+                <p class="job-card-company">{{ m.companyName }}</p>
+              </div>
             </div>
             <div class="match-score-badge" [class.high-match]="m.compositeScore >= 80" [class.mid-match]="m.compositeScore < 80 && m.compositeScore >= 60">
               Match Score: {{ m.compositeScore }}%
             </div>
+          </div>
+
+          <div class="job-chips">
+            <span *ngIf="m.workMode" class="chip-item chip-workmode">{{ m.workMode }}</span>
+            <span *ngIf="m.jobType" class="chip-item chip-jobtype">{{ m.jobType | lowercase }}</span>
+            <span *ngIf="m.experienceLevel" class="chip-item chip-experience">{{ m.experienceLevel }}</span>
           </div>
 
           <div class="job-card-details">
@@ -110,7 +121,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
               </svg>
-              <span>{{ m.location }} &bull; {{ m.jobType || 'Hybrid' | lowercase }}</span>
+              <span>{{ m.location }}</span>
             </div>
             <div class="detail-item">
               <svg class="detail-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -118,6 +129,17 @@
               </svg>
               <span class="salary-txt">{{ m.salaryRange || '₹8–12 LPA' }}</span>
             </div>
+          </div>
+
+          <!-- Skills preview -->
+          <div *ngIf="m.requiredSkills" class="job-skills-preview">
+            <span *ngFor="let s of m.requiredSkills.split(',').slice(0, 3)" class="skill-mini-badge">{{ s.trim() }}</span>
+          </div>
+
+          <!-- Deadline -->
+          <div *ngIf="m.deadline" class="deadline-badge-row">
+            <span class="deadline-lbl">Deadline:</span>
+            <span class="deadline-val">{{ m.deadline | date:'shortDate' }}</span>
           </div>
 
           <div class="job-card-actions">
@@ -226,17 +248,27 @@
         <p>No jobs match your search parameters. Try widening your filters.</p>
       </div>
 
-      <!-- Results Grid -->
       <div class="recommendations-grid" *ngIf="!isSearchLoading() && searchResults().length > 0">
         <div *ngFor="let m of searchResults()" class="job-recommendation-card glass-card" (click)="viewMatchDetails(m.id)">
           <div class="job-card-top">
-            <div class="job-title-group">
-              <h3 class="job-card-title">{{ m.jobTitle }}</h3>
-              <p class="job-card-company">{{ m.companyName }}</p>
+            <div class="job-card-logo-row">
+              <div class="company-logo-avatar">
+                {{ m.companyName ? m.companyName.substring(0, 1) : 'J' }}
+              </div>
+              <div class="job-title-group">
+                <h3 class="job-card-title">{{ m.jobTitle }}</h3>
+                <p class="job-card-company">{{ m.companyName }}</p>
+              </div>
             </div>
             <div class="match-score-badge" [class.high-match]="m.compositeScore >= 80" [class.mid-match]="m.compositeScore < 80 && m.compositeScore >= 60">
               Match Score: {{ m.compositeScore }}%
             </div>
+          </div>
+
+          <div class="job-chips">
+            <span *ngIf="m.workMode" class="chip-item chip-workmode">{{ m.workMode }}</span>
+            <span *ngIf="m.jobType" class="chip-item chip-jobtype">{{ m.jobType | lowercase }}</span>
+            <span *ngIf="m.experienceLevel" class="chip-item chip-experience">{{ m.experienceLevel }}</span>
           </div>
 
           <div class="job-card-details">
@@ -245,7 +277,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
               </svg>
-              <span>{{ m.location }} &bull; {{ m.jobType || 'Hybrid' | lowercase }}</span>
+              <span>{{ m.location }}</span>
             </div>
             <div class="detail-item">
               <svg class="detail-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -253,6 +285,17 @@
               </svg>
               <span class="salary-txt">{{ m.salaryRange || '₹8–12 LPA' }}</span>
             </div>
+          </div>
+
+          <!-- Skills preview -->
+          <div *ngIf="m.requiredSkills" class="job-skills-preview">
+            <span *ngFor="let s of m.requiredSkills.split(',').slice(0, 3)" class="skill-mini-badge">{{ s.trim() }}</span>
+          </div>
+
+          <!-- Deadline -->
+          <div *ngIf="m.deadline" class="deadline-badge-row">
+            <span class="deadline-lbl">Deadline:</span>
+            <span class="deadline-val">{{ m.deadline | date:'shortDate' }}</span>
           </div>
 
           <div class="job-card-actions">
@@ -263,13 +306,13 @@
               </svg>
               Ask AI
             </button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Applications Section -->
-  <div class="applications-section animate-fade-in" *ngIf="activeTab() === 'applications'">
+    <!-- Applications Section -->
+    <div class="applications-section animate-fade-in" *ngIf="activeTab() === 'applications'">
       <h2 class="section-title">Your Submitted Applications</h2>
 
       <!-- Status Filtering Bar -->

@@ -1,0 +1,282 @@
+<app-navbar></app-navbar>
+
+<div class="auth-wrapper onboarding-layout">
+  <div class="onboarding-container" style="max-width: 900px;">
+    
+    <div class="onboarding-header">
+      <div class="brand-logo"><a href="/">NEXUS</a></div>
+      <h2 class="auth-title">Verify Extracted Profile</h2>
+      <p class="auth-subtitle">AI has populated your details. Please review, fix errors, and fill missing fields.</p>
+    </div>
+
+    <!-- Error/Success Banners -->
+    <div *ngIf="errorMessage()" class="alert alert-error animate-fade-in">
+      {{ errorMessage() }}
+    </div>
+    <div *ngIf="successMessage()" class="alert alert-success animate-fade-in">
+      {{ successMessage() }}
+    </div>
+
+    <div *ngIf="isLoading()" class="loading-state animate-fade-in" style="min-height: 250px;">
+      <div class="loading-spinner" style="width: 50px; height: 50px; border-width: 3px;"></div>
+      <h3 class="loading-title" style="margin-top: 1rem; font-size: 1.15rem;">Saving details and ranking matches...</h3>
+    </div>
+
+    <form *ngIf="!isLoading()" (ngSubmit)="onSubmit()" class="review-form animate-fade-in">
+      
+      <!-- CARD 1: Personal Information -->
+      <div class="review-card glass-card">
+        <div class="card-header-row">
+          <h3 class="card-title">Personal Information</h3>
+          <span *ngIf="hasField(profileData().firstName) && hasField(profileData().lastName) && hasField(profileData().githubUrl)" class="badge-verified">✓ Extracted</span>
+          <span *ngIf="!hasField(profileData().firstName) || !hasField(profileData().lastName) || !hasField(profileData().githubUrl)" class="badge-incomplete">⚠ Incomplete</span>
+        </div>
+
+        <div class="form-row-grid">
+          <div class="form-group">
+            <label class="form-label">First Name *</label>
+            <input type="text" [(ngModel)]="profileData().firstName" name="firstName" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last Name *</label>
+            <input type="text" [(ngModel)]="profileData().lastName" name="lastName" class="form-input" required>
+          </div>
+        </div>
+
+        <div class="form-row-grid">
+          <div class="form-group">
+            <label class="form-label">GitHub URL</label>
+            <input type="url" [(ngModel)]="profileData().githubUrl" name="githubUrl" class="form-input" placeholder="https://github.com/username">
+          </div>
+          <div class="form-group">
+            <label class="form-label">LinkedIn URL</label>
+            <input type="url" [(ngModel)]="profileData().linkedinUrl" name="linkedinUrl" class="form-input" placeholder="https://linkedin.com/in/username">
+          </div>
+        </div>
+
+        <div class="form-row-grid">
+          <div class="form-group">
+            <label class="form-label">Portfolio URL</label>
+            <input type="url" [(ngModel)]="profileData().portfolioUrl" name="portfolioUrl" class="form-input" placeholder="https://myportfolio.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Known Languages (comma-separated)</label>
+            <input type="text" [(ngModel)]="profileData().languages" name="languages" class="form-input" placeholder="English, Spanish, Hindi">
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 2: Education -->
+      <div class="review-card glass-card">
+        <div class="card-header-row">
+          <h3 class="card-title">Education</h3>
+          <span *ngIf="hasField(profileData().education)" class="badge-verified">✓ Extracted ({{ profileData().education.length }})</span>
+          <span *ngIf="!hasField(profileData().education)" class="badge-incomplete">⚠ Empty</span>
+        </div>
+
+        <div *ngFor="let edu of profileData().education; let idx = index" class="list-item-block">
+          <div class="item-header-row">
+            <h4 class="item-sub-title">Institution #{{ idx + 1 }}</h4>
+            <button type="button" (click)="removeEducation(idx)" class="btn-delete-item">Remove</button>
+          </div>
+          
+          <div class="form-row-grid">
+            <div class="form-group">
+              <label class="form-label">University / College *</label>
+              <input type="text" [(ngModel)]="edu.institution" name="edu_inst_{{idx}}" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Degree *</label>
+              <input type="text" [(ngModel)]="edu.degree" name="edu_deg_{{idx}}" class="form-input" placeholder="B.Tech, B.S., M.S." required>
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-group">
+              <label class="form-label">Field of Study *</label>
+              <input type="text" [(ngModel)]="edu.fieldOfStudy" name="edu_field_{{idx}}" class="form-input" placeholder="Computer Science" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">CGPA / GPA</label>
+              <input type="number" step="0.01" [(ngModel)]="edu.gpa" name="edu_gpa_{{idx}}" class="form-input" placeholder="9.5 or 3.8">
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-group">
+              <label class="form-label">Start Date</label>
+              <input type="date" [(ngModel)]="edu.startDate" name="edu_start_{{idx}}" class="form-input">
+            </div>
+            <div class="form-group">
+              <label class="form-label">End Date (Expected)</label>
+              <input type="date" [(ngModel)]="edu.endDate" name="edu_end_{{idx}}" class="form-input">
+            </div>
+          </div>
+        </div>
+
+        <button type="button" (click)="addEducation()" class="btn btn-secondary btn-sm add-item-btn">+ Add Education</button>
+      </div>
+
+      <!-- CARD 3: Technical Skills -->
+      <div class="review-card glass-card">
+        <div class="card-header-row">
+          <h3 class="card-title">Technical Skills</h3>
+          <span *ngIf="hasField(profileData().skills)" class="badge-verified">✓ Extracted ({{ profileData().skills.length }})</span>
+          <span *ngIf="!hasField(profileData().skills)" class="badge-incomplete">⚠ Empty</span>
+        </div>
+
+        <div class="skills-input-list">
+          <div *ngFor="let skill of profileData().skills; let idx = index" class="skill-pill-input">
+            <input type="text" [(ngModel)]="skill.name" name="skill_name_{{idx}}" class="skill-name-field" placeholder="Java" required>
+            <select [(ngModel)]="skill.proficiencyLevel" name="skill_level_{{idx}}" class="skill-level-select">
+              <option value="BEGINNER">Beginner</option>
+              <option value="INTERMEDIATE">Intermediate</option>
+              <option value="ADVANCED">Advanced</option>
+              <option value="EXPERT">Expert</option>
+            </select>
+            <button type="button" (click)="removeSkill(idx)" class="skill-delete-x">×</button>
+          </div>
+        </div>
+
+        <button type="button" (click)="addSkill()" class="btn btn-secondary btn-sm add-item-btn" style="margin-top: 1rem;">+ Add Skill</button>
+      </div>
+
+      <!-- CARD 4: Work Experience -->
+      <div class="review-card glass-card">
+        <div class="card-header-row">
+          <h3 class="card-title">Work Experience</h3>
+          <span *ngIf="hasField(profileData().experience)" class="badge-verified">✓ Extracted ({{ profileData().experience.length }})</span>
+          <span *ngIf="!hasField(profileData().experience)" class="badge-incomplete">⚠ Empty</span>
+        </div>
+
+        <div *ngFor="let exp of profileData().experience; let idx = index" class="list-item-block">
+          <div class="item-header-row">
+            <h4 class="item-sub-title">Role #{{ idx + 1 }}</h4>
+            <button type="button" (click)="removeExperience(idx)" class="btn-delete-item">Remove</button>
+          </div>
+          
+          <div class="form-row-grid">
+            <div class="form-group">
+              <label class="form-label">Company Name *</label>
+              <input type="text" [(ngModel)]="exp.companyName" name="exp_comp_{{idx}}" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Job Title *</label>
+              <input type="text" [(ngModel)]="exp.jobTitle" name="exp_title_{{idx}}" class="form-input" required>
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-group">
+              <label class="form-label">Start Date</label>
+              <input type="date" [(ngModel)]="exp.startDate" name="exp_start_{{idx}}" class="form-input">
+            </div>
+            <div class="form-group">
+              <label class="form-label">End Date</label>
+              <input type="date" [(ngModel)]="exp.endDate" name="exp_end_{{idx}}" class="form-input">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Responsibilities & Description</label>
+            <textarea [(ngModel)]="exp.description" name="exp_desc_{{idx}}" class="form-input" rows="3" placeholder="Detail your accomplishments, key stacks used, etc."></textarea>
+          </div>
+        </div>
+
+        <button type="button" (click)="addExperience()" class="btn btn-secondary btn-sm add-item-btn">+ Add Experience</button>
+      </div>
+
+      <!-- CARD 5: Projects -->
+      <div class="review-card glass-card">
+        <div class="card-header-row">
+          <h3 class="card-title">Projects</h3>
+          <span *ngIf="hasField(profileData().projects)" class="badge-verified">✓ Extracted ({{ profileData().projects.length }})</span>
+          <span *ngIf="!hasField(profileData().projects)" class="badge-incomplete">⚠ Empty</span>
+        </div>
+
+        <div *ngFor="let proj of profileData().projects; let idx = index" class="list-item-block">
+          <div class="item-header-row">
+            <h4 class="item-sub-title">Project #{{ idx + 1 }}</h4>
+            <button type="button" (click)="removeProject(idx)" class="btn-delete-item">Remove</button>
+          </div>
+          
+          <div class="form-row-grid">
+            <div class="form-group">
+              <label class="form-label">Project Name *</label>
+              <input type="text" [(ngModel)]="proj.name" name="proj_name_{{idx}}" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Technologies (comma-separated)</label>
+              <input type="text" [(ngModel)]="proj.technologies" name="proj_tech_{{idx}}" class="form-input" placeholder="Angular, NestJS, MongoDB">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">GitHub Repository Link</label>
+            <input type="url" [(ngModel)]="proj.repoUrl" name="proj_repo_{{idx}}" class="form-input" placeholder="https://github.com/username/project">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea [(ngModel)]="proj.description" name="proj_desc_{{idx}}" class="form-input" rows="2" placeholder="Brief explanation of what the project does."></textarea>
+          </div>
+        </div>
+
+        <button type="button" (click)="addProject()" class="btn btn-secondary btn-sm add-item-btn">+ Add Project</button>
+      </div>
+
+      <!-- CARD 6: Career Interests & Onboarding Preferences -->
+      <div class="review-card glass-card">
+        <div class="card-header-row">
+          <h3 class="card-title">Career Preferences</h3>
+          <span class="badge-incomplete">⚠ Complete Manually</span>
+        </div>
+
+        <div class="form-row-grid">
+          <div class="form-group">
+            <label class="form-label">Preferred Job Role *</label>
+            <input type="text" [(ngModel)]="preferredRole" name="preferredRole" class="form-input" placeholder="Software Engineer, Product Manager" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Preferred Location / City *</label>
+            <input type="text" [(ngModel)]="preferredCity" name="preferredCity" class="form-input" placeholder="Bangalore, Hybrid/Remote" required>
+          </div>
+        </div>
+
+        <div class="form-row-grid">
+          <div class="form-group">
+            <label class="form-label">Expected Annual Salary</label>
+            <input type="text" [(ngModel)]="expectedSalary" name="expectedSalary" class="form-input" placeholder="e.g. ₹12,00,000 or $80,000">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Employment Type *</label>
+            <select [(ngModel)]="employmentType" name="employmentType" class="form-input" required>
+              <option value="FULL_TIME">Full-Time</option>
+              <option value="PART_TIME">Part-Time</option>
+              <option value="INTERNSHIP">Internship</option>
+              <option value="CONTRACT">Contract</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Work Mode Preference *</label>
+          <select [(ngModel)]="workMode" name="workMode" class="form-input" required>
+            <option value="REMOTE">Remote</option>
+            <option value="HYBRID">Hybrid</option>
+            <option value="ONSITE">On-Site</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="actions-row" style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+        <button type="button" (click)="fetchExtractedData()" class="btn btn-secondary">Re-fetch Resume</button>
+        <button type="submit" class="btn btn-primary" style="padding: 0.75rem 3rem;">Confirm & Continue</button>
+      </div>
+
+    </form>
+
+  </div>
+</div>
+
+<app-footer></app-footer>
