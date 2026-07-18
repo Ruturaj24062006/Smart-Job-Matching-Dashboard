@@ -92,7 +92,7 @@
       <!-- 3-Step Onboarding Hero Banner (When Profile is Incomplete / Resume Not Uploaded) -->
       <div class="job-board-onboarding-card glass-card animate-fade-in" *ngIf="(profile()?.profileCompletedPct || 0) < 85">
         <div class="onboarding-card-header text-center">
-          <h2 class="onboarding-main-title">Create your job board in <span class="accent-orange">3 simple steps</span></h2>
+          <h2 class="onboarding-main-title">Create your job board in <span class="accent-red">3 simple steps</span></h2>
           <p class="onboarding-main-subtitle">
             Upload your resume, tell us your preferred role and location, and get a personalized job board ranked by match score, missing keywords, and role fit.
           </p>
@@ -807,7 +807,7 @@
 
     <!-- STEP 2: Uploading & AI Parsing Animation -->
     <div *ngIf="uploadStep() === 'uploading'" class="modal-body-step text-center">
-      <div class="spinner-loader orange-spinner"></div>
+      <div class="spinner-loader red-spinner"></div>
       <h2 class="popup-title">NEXUS AI is Parsing Your Resume...</h2>
       <p class="popup-subtitle">Extracting skills, projects, work history, and generating candidate vector embedding...</p>
       
@@ -862,7 +862,7 @@
 
       <div class="popup-actions-row">
         <button type="button" class="btn btn-secondary" (click)="uploadStep.set('select')">Re-upload File</button>
-        <button type="button" class="btn btn-primary btn-search-jobs-orange" (click)="confirmModalAndSearchJobs()">
+        <button type="button" class="btn btn-primary btn-search-jobs-red" (click)="confirmModalAndSearchJobs()">
           Search Matching Jobs 🔍
         </button>
       </div>
