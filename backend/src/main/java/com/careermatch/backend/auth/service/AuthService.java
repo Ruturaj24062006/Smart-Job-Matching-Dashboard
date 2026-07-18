@@ -141,9 +141,17 @@ public class AuthService {
             ResponseEntity<Map> response = restTemplate.postForEntity(supabaseUrl + "/auth/v1/signup", entity, Map.class);
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                return (String) response.getBody().get("id");
+                Map<String, Object> respBody = response.getBody();
+                if (respBody.containsKey("id")) {
+                    return (String) respBody.get("id");
+                } else if (respBody.containsKey("user")) {
+                    Map<String, Object> userMap = (Map<String, Object>) respBody.get("user");
+                    if (userMap != null && userMap.containsKey("id")) {
+                        return (String) userMap.get("id");
+                    }
+                }
             }
-            throw new RuntimeException("Empty response from Supabase Signup API");
+            throw new RuntimeException("Could not find user ID in Supabase response");
         } catch (Exception e) {
             log.error("Failed to sign up in Supabase: {}", e.getMessage());
             throw new BadRequestException("Supabase signup failed: " + e.getMessage());
