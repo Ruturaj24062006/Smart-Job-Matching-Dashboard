@@ -1,15 +1,21 @@
-# 🚀 NEXUS — AI-Powered Smart Job Matching & Resume Parsing Dashboard
+# 🚀 NEXUS – AI-Powered Smart Job Matching Platform
 
-A production-grade, AI-driven job matching and talent discovery platform designed to align job seekers with relevant opportunities using **Hybrid RAG Semantic Search (pgvector + BM25 RRF)**, **Deterministic 6-Factor Scoring**, **Fast In-Memory PDF Parsing**, and an **Interactive AI Career Assistant**.
+[![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/Ruturaj24062006/Smart-Job-Matching-Dashboard/blob/main/LICENSE)
+[![Java](https://img.shields.io/badge/Java-21-blue)](https://openjdk.org/projects/jdk/21/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3%2B-lightgreen)](https://spring.io/projects/spring-boot)
+[![Angular](https://img.shields.io/badge/Angular-18-DD0031?logo=angular)](https://angular.dev/)
+[![Render](https://img.shields.io/badge/Render-Deploy-%2300B8FF)](https://render.com/)
+
+An enterprise-grade, AI-driven recruitment platform designed to seamlessly connect job seekers with employers through **Hybrid RAG Semantic Search (pgvector + BM25 RRF)**, **Deterministic 6-Factor Scoring**, **Fast In-Memory PDF Resume Parsing**, and an **Interactive AI Career Assistant**.
 
 ---
 
 ## 👥 Team Details & Project Metadata
 - **Team Name**: the solver squad
 - **Team Members**:
-  - Ruturaj Ambure
-  - Shantanu Gudmewar
-  - Atharv Bhavsar
+  - **Ruturaj Ambure** (Lead Architecture & Backend Engineer)
+  - **Shantanu Gudmewar** (Frontend Lead & UI/UX Developer)
+  - **Atharv Bhavsar** (AI/ML & DevOps Engineer)
 
 ---
 
@@ -36,127 +42,144 @@ You can log in directly using the pre-seeded recruiter/company accounts or regis
 
 ---
 
-## 🧠 Core Engineering Architecture & Algorithms
+## ✨ Key Features
 
-NEXUS is engineered with a multi-layered matching and parsing architecture to deliver accurate, sub-second recommendations:
+| Student Module | Recruiter Module | AI Features |
+|----------------|------------------|-------------|
+| 🔐 Authentication & Session Persistence | 🔐 Recruiter Auth & Management | 🤖 In-Memory Resume Parsing |
+| 📊 Dashboard with Live Match Scores | 📊 Applicant Analytics Dashboard | 📐 384-d Vector Embeddings (`all-MiniLM-L6-v2`) |
+| 📁 Fast PDF Resume Upload & Parsing | 🛠️ Job Posting & Requirements Engine | 🔍 Hybrid RAG Search (`pgvector` + BM25) |
+| 🧩 9-Section Structured Profile Editor | 👥 AI-Ranked Candidate Lists | 🎯 Deterministic 6-Factor Match Scoring |
+| 🤖 Ask NEXUS AI Career Assistant | 📄 Candidate Resume & Profile Viewer | 📈 Real-Time Job Recommendations |
+| 🔎 Search & Filter Jobs (Role, City, Skills) | 📈 Recruitment Pipeline Insights | 🛡️ Automatic Profile Fallback Resilience |
+| 💾 Saved Jobs & Application Tracker | 🏢 Company Profile Management | 🗣️ Groq LLM Interactive Coaching (`Llama 3.3 70B`) |
 
+---
+
+## 🏗️ System Architecture
+
+```mermaid
+graph TD
+    subgraph ClientLayer["Frontend Client (Angular 18 / SPA)"]
+        UI_Student[Student Dashboard & Profile]
+        UI_Recruiter[Recruiter Portal & Job Posting]
+        UI_AI[Ask NEXUS AI Assistant]
+    end
+
+    subgraph API["Backend Web Layer (Spring Boot 3.3 / Java 21)"]
+        AuthCtrl[Auth Controller & JWT Filter]
+        JobCtrl[Job Management & Search Controller]
+        ResumeCtrl[Resume Processing Controller]
+        ProfileCtrl[Student Profile Controller]
+    end
+
+    subgraph Engine["Matching & AI Services Layer"]
+        ResumeService[PdfParser & Groq Extraction Service]
+        EmbeddingService[ONNX MiniLM Embedding Service]
+        SearchService[Hybrid RAG & RRF Search Service]
+        ScoringService[6-Factor Scoring Engine]
+        GroqService[Groq LLM Career Coach]
+    end
+
+    subgraph Persistence["Storage & Middleware Layer"]
+        Postgres[(Supabase PostgreSQL + pgvector)]
+        Redis[(Redis Match Cache)]
+        RabbitMQ[(RabbitMQ Queue / Local Listener)]
+    end
+
+    UI_Student -->|REST / JWT| AuthCtrl
+    UI_Student -->|REST / JWT| JobCtrl
+    UI_Student -->|REST / JWT| ResumeCtrl
+    UI_Recruiter -->|REST / JWT| JobCtrl
+    UI_AI -->|REST / JWT| JobCtrl
+
+    ResumeCtrl --> ResumeService
+    ResumeService --> EmbeddingService
+    ResumeService --> GroqService
+    JobCtrl --> SearchService
+    JobCtrl --> GroqService
+    SearchService --> ScoringService
+
+    EmbeddingService --> Postgres
+    SearchService --> Postgres
+    SearchService --> Redis
+    ResumeService --> RabbitMQ
 ```
-┌───────────────────────────────────────────────────────────────────────────────────────────┐
-│                                    NEXUS MATCHING PIPELINE                                │
-└───────────────────────────────────────────────────────────────────────────────────────────┘
-                                              │
-       ┌──────────────────────────────────────┴──────────────────────────────────────┐
-       │                                                                             │
-┌──────▼────────────────────────────┐                       ┌────────────────────────▼─────┐
-│    PRIMARY: RESUME PARSING        │                       │    FALLBACK: STUDENT PROFILE │
-│ (PDFBox -> Embedding -> Groq LLM) │                       │ (Skills, Exp, Edu, Projects) │
-└──────┬────────────────────────────┘                       └────────────────────────┬─────┘
-       │                                                                             │
-       └──────────────────────────────────────┬──────────────────────────────────────┘
-                                              │
-                                   ┌──────────▼──────────┐
-                                   │  HYBRID RAG SEARCH  │
-                                   └──────────┬──────────┘
-                                              │
-                      ┌───────────────────────┴───────────────────────┐
-                      │                                               │
-           ┌──────────▼──────────┐                         ┌──────────▼──────────┐
-           │   DENSE VECTOR      │                         │     SPARSE FTS      │
-           │  (pgvector Cosine)  │                         │    (Postgres BM25)  │
-           └──────────┬──────────┘                         └──────────┬──────────┘
-                      │                                               │
-                      └───────────────────────┬───────────────────────┘
-                                              │
-                                   ┌──────────▼──────────┐
-                                   │  RRF RANK FUSION    │
-                                   │    (SQL RRF k=60)   │
-                                   └──────────┬──────────┘
-                                              │
-                                   ┌──────────▼──────────┐
-                                   │  6-FACTOR SCORING   │
-                                   │ (Deterministic Engine│
-                                   └──────────┬──────────┘
-                                              │
-                                   ┌──────────▼──────────┐
-                                   │   SCORE DONUT RING  │
-                                   │ (Sorted & Cached)   │
-                                   └─────────────────────┘
-```
-
-### 1. 🔍 Hybrid RAG Search Engine (pgvector + BM25 RRF)
-- **Dense Vector Retrieval**: Uses the quantized ONNX `all-MiniLM-L6-v2` model in Java to generate 384-dimensional vector embeddings stored directly in PostgreSQL using `pgvector`. Performs high-speed cosine distance similarity search (`<=>`).
-- **Sparse Full-Text Retrieval (BM25)**: Utilizes PostgreSQL `tsvector` with disjunctive Cover Density scoring (`websearch_to_tsquery`) across skill tags, experience job titles, project tech stacks, education majors, and resume text.
-- **Reciprocal Rank Fusion (RRF)**: Merges dense and sparse search results in SQL using $RRF(d) = \sum \frac{1}{k + r_i(d)}$ ($k=60$) to achieve optimal precision and recall.
-
-### 2. 🎯 Deterministic 6-Factor Scoring Engine
-Every candidate job is passed through a deterministic scoring matrix yielding a composite score out of 100%:
-- 🛠️ **Technical Skill Overlap (40%)**: Skill tag overlap against job requirements & description.
-- 🚀 **Project Fit (20%)**: Project technologies, titles, and descriptions matching candidate job domain.
-- 🏢 **Years of Experience Fit (15%)**: Work experience duration mapped against required seniority levels (Entry, Mid, Senior).
-- 🎯 **Domain & Preference Fit (10%)**: Education field of study, past experience titles, and target job role preferences.
-- 🤝 **Behavioral & Soft Skills Match (10%)**: Bio and experience text scanned for soft skill indicators (leadership, teamwork, communication, agile).
-- 🎓 **Education & Certifications Fit (5%)**: Degree status and professional certifications.
-
-### 3. ⚡ Optimized In-Memory Resume Ingestion Pipeline
-- **Direct PDF Parsing**: Utilizes Apache PDFBox to read PDF files directly from memory streams (`byte[]`), completely bypassing disk I/O bottlenecks.
-- **Parallel Task Execution**: Runs ONNX vector embedding generation and Groq LLM profile extraction (`Llama 3.3 70B Versatile`) in parallel using a dedicated Spring thread pool (`resumeProcessingExecutor`).
-- **Connection Pooling**: Utilizes Apache HttpComponents 5 (`httpclient5`) for high-performance HTTP connection pooling to external AI APIs.
-
-### 4. 🛡️ Fail-Safe Profile Fallback Mechanism
-- If resume parsing fails (e.g. image-only PDF, network glitch, or AI timeout), the platform does **NOT** block the user.
-- The workflow seamlessly transitions to generating the vector embedding and BM25 keywords directly from the student's **Profile details** (skills, education, projects, experience, preferences).
-- Ensures uninterrupted job matching until a new resume is uploaded.
 
 ---
 
 ## 🛠️ Complete Technology Stack
 
-### 🔹 Backend Architecture
-- **Language & Runtime**: Java 21, Spring Boot 3.3.0
-- **Security**: Spring Security 6, Stateless JWT Tokens (`jjwt`), BCrypt Password Encoding
-- **Database & Storage**: PostgreSQL 16+, `pgvector` extension, Hibernate 6, Spring Data JPA
-- **Caching & Messaging**: Redis (1-hour TTL for match caches), RabbitMQ with Spring AMQP & `LocalEventFallbackListener`
-- **AI & Embeddings**: LangChain4j, ONNX Quantized `all-MiniLM-L6-v2` model (in-process 384d vector generation)
-- **External APIs**: Groq API (`llama-3.3-70b-versatile` LLM), Resend Email API, Supabase Auth
-- **HTTP Client**: Apache HttpComponents 5 (`httpclient5`)
-
-### 🔹 Frontend Architecture
-- **Framework**: Angular 18 (Standalone Components, Signals API, RxJS, Reactive & Template-Driven Forms)
-- **UI & Styling**: Modern Vanilla CSS3, Custom HSL Color Systems, Glassmorphism Cards, CSS Flexbox & Grid layouts, Animated SVG Icons
-- **Routing**: Angular Router with strict Role-Based Route Guards (`authGuard`, `roleGuard`)
-- **Interceptors**: HTTP JWT Auth Interceptor with automatic bearer token attachment
-
-### 🔹 DevOps & Cloud Infrastructure
-- **Hosting**: Render Cloud Platform (Web Services for Spring Boot backend, Static Sites for Angular frontend)
-- **Database Hosting**: Supabase Cloud PostgreSQL with pgvector enabled
-- **Build Tools**: Apache Maven (`mvnw`), Angular CLI (`ng build`)
+| Component | Technology | Description |
+|-----------|------------|-------------|
+| **Frontend Framework** | **Angular 18** | Modern Standalone Components, Signals API, RxJS, Template-driven & Reactive Forms |
+| **Frontend Styling** | **Vanilla CSS3** | Glassmorphism UI, custom CSS variables, responsive CSS Grid/Flexbox, micro-animations |
+| **Backend Framework** | **Java 21 / Spring Boot 3.3+** | Stateless REST APIs, Spring Data JPA, Spring Security 6, Jackson JSON |
+| **Authentication** | **Supabase Auth & JWT** | Bearer JWT Token Interceptors, BCrypt Password Encoding, Role-Based Route Guards |
+| **Database** | **Supabase PostgreSQL 16+** | `pgvector` extension for 384-d cosine similarity search, `tsvector` for BM25 FTS |
+| **Caching & Queues** | **Redis & RabbitMQ** | 1-hour TTL query result caching, asynchronous resume processing queues with local event fallback |
+| **Embeddings & NLP** | **ONNX `all-MiniLM-L6-v2`** | Native in-process Java 384-dimensional vector generation |
+| **LLM Service** | **Groq API (`Llama 3.3 70B`)** | Ultra-fast JSON resume extraction and interactive candidate career coaching |
+| **Document Processing** | **Apache PDFBox & Apache Tika** | Direct stream PDF parsing avoiding disk I/O bottlenecks |
+| **DevOps & Cloud** | **Render Platform** | Dockerized Spring Boot Web Services & Angular Static Site deployment |
 
 ---
 
-## ✨ Key Features & User Experience
+## 📋 Project Workflows
 
-### 🎓 For Students
-1. **Interactive Dashboard**:
-   - Live job recommendations ranked by composite match score (e.g. `94% Match`).
-   - Circular Score Donut Rings with visual fit indicators (*Great Fit*, *Good Fit*).
-   - Instant filtering by job role, city location, experience level, job type, and skill tags.
-   - Collapsible **Job Boards** sidebar (`All Matches`, `.Net Developer`, `Java Developer`, `Frontend Engineer`, `AI Engineer`).
-2. **Ask AI 🤖 Career Coach**:
-   - Click **Ask AI** on any job card or in the job details modal to launch an interactive chat with NEXUS AI.
-   - Receives personalized explanations on why the job fits their profile, skill gap analyses, and recommendations.
-3. **Dedicated Student Profile Page**:
-   - Complete 9-section profile editor: **Personal Information**, **Professional Information**, **Skills** (technical & soft skill chips), **Education**, **Work Experience**, **Projects**, **Certifications**, **Resume**, and **Account Settings**.
-   - Dynamic **Profile Strength Bar** calculating completion percentage in real time.
-4. **Inline Resume Upload & Progress Tracker**:
-   - Real-time progress bar with ETA countdown and detailed stage indicators (*Uploading*, *Parsing*, *Embedding*, *Saving*).
+### 🎓 Student User Flow
+1. **Registration & Auth**: Sign up at `/register` or log in with credentials.
+2. **Resume Ingestion**: Upload PDF resume; system parses text in memory, extracts structured entities via Groq LLM, and generates dense vector embeddings.
+3. **Profile Management**: Manage 9 structured sections (Personal, Professional, Skills, Education, Experience, Projects, Certifications, Resume, Account Settings).
+4. **Job Search & Matching**: View live matches sorted by score donut ring. Filter by skill chips, city, work mode, or job boards.
+5. **Ask NEXUS AI**: Click **Ask AI** on any job card for tailored AI coaching and fit explanation.
+6. **Apply & Track**: One-click application submission with instant recruiter notification.
 
-### 🏢 For Recruiters
-1. **Job Posting Management**: Create and manage job openings with custom requirements, required skills, preferred skills, location, work mode, and salary ranges.
-2. **AI Applicant Ranking**: Automatically ranks incoming applicants based on their calculated match score against job specifications.
+### 🧑‍💼 Recruiter User Flow
+1. **Login & Portal Access**: Log in as recruiter (`hr@nexoratech.example`).
+2. **Company & Job Creation**: Post job openings specifying required skills, experience level, location, and salary bounds.
+3. **Candidate Discovery & Ranking**: System runs Hybrid RAG and ranks applicant profiles using the 6-factor scoring engine.
+4. **Application Review**: Inspect candidate profile strength, extracted skills, and submission dates.
 
 ---
 
-## 📁 Repository Structure
+## 📄 Resume Processing Pipeline
+
+```mermaid
+flowchart TD
+    A[PDF Upload Input Stream] --> B[Apache PDFBox In-Memory Extraction]
+    B --> C[Plain Text Cleaned]
+    C --> D1[ONNX MiniLM Embedding Task]
+    C --> D2[Groq Llama 3.3 LLM Entity Extractor]
+    D1 --> E1[384-d Vector Array]
+    D2 --> E2[Structured JSON Profile]
+    E1 & E2 --> F[Database Save & Vector Indexing]
+    
+    style A fill:#e1f5fe,stroke:#0288d1
+    style F fill:#e8f5e9,stroke:#388e3c
+```
+
+* **Fallback Strategy**: If PDF parsing fails (e.g. scanned image PDF or timeout), system automatically synthesizes keywords and vector embeddings from the **Student's Profile details**, ensuring 100% workflow uptime.
+
+---
+
+## 🤖 AI Job Matching Pipeline
+
+Matching relies on a **Hybrid RAG** architecture combining vector search, full-text search, and deterministic scoring:
+
+```
+Score = (Skills × 0.40) + (Projects × 0.20) + (Experience × 0.15) + (Domain × 0.10) + (SoftSkills × 0.10) + (Education × 0.05)
+```
+
+1. **Dense Vector Search**: `pgvector` calculates cosine distance similarity (`<=>`) against job embeddings.
+2. **Sparse Search (BM25)**: PostgreSQL `tsvector` calculates keyword relevance via `websearch_to_tsquery`.
+3. **Reciprocal Rank Fusion (RRF)**: Merges dense and sparse ranks in SQL using:
+   $$RRF(d) = \sum \frac{1}{60 + r_i(d)}$$
+4. **Deterministic 6-Factor Engine**: Applies domain-specific weighting to return a final 0–100% match score.
+
+---
+
+## 📂 Repository & Folder Structure
 
 ```
 Smart-Job-Matching-Dashboard/
@@ -193,19 +216,19 @@ Smart-Job-Matching-Dashboard/
 
 ---
 
-## ⚡ Local Setup & Installation Guide
+## ⚡ Installation & Setup
 
 ### Prerequisites
 - **Java JDK 21** or higher
 - **Node.js 18+** & **npm**
-- **PostgreSQL 16+** with `pgvector` extension installed (`CREATE EXTENSION IF NOT EXISTS vector;`)
-- **Redis Server** (optional, fallback to local memory in dev)
+- **PostgreSQL 16+** with `pgvector` extension enabled (`CREATE EXTENSION IF NOT EXISTS vector;`)
+- **Redis Server** (optional, dev fallback available)
 
 ### 1. Backend Setup (`/backend`)
 ```bash
 cd backend
 
-# Configure environment variables in application.yml or environment
+# Configure environment variables (or update application.yml)
 export DB_HOST=localhost
 export DB_PORT=5432
 export DB_NAME=careermatch
@@ -232,10 +255,124 @@ Frontend App will start at: `http://localhost:4200`
 
 ---
 
-## 📜 Summary of Pushed Features & Video Demonstrations
+## ▶️ Running the Project
 
-- **Full Student Profile Page**: 9 modular sections, sticky navigation, progress bar, inline upload modal.
-- **Collapsible Sidebar**: Job boards sub-list toggle with smooth chevron animations.
-- **Nexora Technologies Pvt. Ltd. Integration**: Seeded company profile and job postings in Hinjawadi, Pune with match scoring.
-- **Ask AI & Apply Now**: Integrated on all job cards for immediate interactive AI coaching and job application submission.
-- **Fail-Safe Profile Fallback**: Guarantees sub-second match scoring even when uploaded PDF parsing encounters unsupported formats.
+| Component | Dev Command | Port |
+|-----------|-------------|------|
+| **Backend REST API** | `./mvnw.cmd spring-boot:run` | `8080` |
+| **Frontend Web App** | `npm start` | `4200` |
+| **Production Build Test** | `npm run build` | `dist/frontend` |
+
+---
+
+## 📚 API Overview
+
+| Endpoint | Method | Role | Description |
+|----------|--------|------|-------------|
+| `/api/v1/auth/login` | `POST` | Public | Authenticate user & return JWT token |
+| `/api/v1/auth/register` | `POST` | Public | Register new Student or Recruiter account |
+| `/api/v1/resumes/upload` | `POST` | Student | Upload PDF resume for parsing & embedding |
+| `/api/v1/students/profile` | `GET/PUT` | Student | Fetch or update 9-section student profile |
+| `/api/v1/jobs/matches` | `GET` | Student | Fetch AI-matched job recommendations |
+| `/api/v1/jobs/search` | `GET` | Student | Search jobs using Hybrid RAG (pgvector + BM25) |
+| `/api/v1/ai/ask` | `POST` | Student | Send query to Ask NEXUS AI Career Coach |
+| `/api/v1/recruiter/jobs` | `POST/GET` | Recruiter | Post new job or view created jobs |
+| `/api/v1/recruiter/applications` | `GET` | Recruiter | View ranked applicants for job openings |
+
+---
+
+## 🗂️ Database Schema Overview
+
+```mermaid
+classDiagram
+    class Student {
+        +UUID id
+        +String email
+        +String firstName
+        +String lastName
+        +String phone
+        +String targetRole
+        +int yearsOfExperience
+        +List~String~ technicalSkills
+        +List~Experience~ experience
+        +List~Project~ projects
+        +List~Education~ education
+    }
+
+    class Job {
+        +UUID id
+        +String title
+        +String description
+        +String companyName
+        +String location
+        +List~String~ requiredSkills
+        +Vector384 embedding
+    }
+
+    class Company {
+        +UUID id
+        +String name
+        +String industry
+        +String location
+        +String email
+    }
+
+    class Application {
+        +UUID id
+        +UUID studentId
+        +UUID jobId
+        +Double matchScore
+        +String status
+        +DateTime appliedAt
+    }
+
+    Company "1" --> "*" Job : owns
+    Student "1" --> "*" Application : submits
+    Job "1" --> "*" Application : receives
+```
+
+---
+
+## 📸 Screenshots & Demonstrations
+
+> *Video Walkthrough and Screenshots are stored in the project assets and Google Drive repository.*
+
+| Student Dashboard | Profile Editor | Ask AI Assistant |
+|---|---|---|
+| Match Scores & Donut Rings | 9-Section Structured Editor | Instant Career Coaching |
+
+---
+
+## 🚀 Future Enhancements
+- 🎙️ **AI Mock Interview Simulator**: Speech-to-text interactive mock technical interviews.
+- 📬 **Real-time Push Notifications**: Instant alerts when a high-matching job is posted.
+- 📊 **Recruiter Market Analytics**: Salary benchmarking and skill availability maps.
+- 📱 **Mobile Native Companion App**: Flutter cross-platform mobile experience.
+
+---
+
+## 🔐 Security & Performance Features
+- 🔒 **Stateless JWT Tokens**: Signed authorization headers with strict expiry timers.
+- 🛡️ **Role-Based Access Control (RBAC)**: Enforced via Spring Security & Angular Route Guards.
+- ⚡ **Sub-Second Search Latency**: In-memory PDFBox parsing + ONNX native embeddings + Redis query caching.
+- 🌐 **CORS Configuration**: Restricted origin policies protecting backend API endpoints.
+
+---
+
+## 👥 Contributors
+
+- **Ruturaj Ambure** — Lead Architect & Backend Engineer ([GitHub](https://github.com/Ruturaj24062006))
+- **Shantanu Gudmewar** — Frontend Lead & UI/UX Developer
+- **Atharv Bhavsar** — AI/ML & DevOps Specialist
+
+---
+
+## 📄 License
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 📞 Contact Information
+For questions, feedback, or enterprise inquiries, reach out via:
+- **Email**: `hr@nexoratech.example`
+- **GitHub**: [Smart-Job-Matching-Dashboard](https://github.com/Ruturaj24062006/Smart-Job-Matching-Dashboard)
