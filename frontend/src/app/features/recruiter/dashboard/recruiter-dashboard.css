@@ -2838,6 +2838,7 @@ div.score-low { background-color: #c5221f; }
   cursor: not-allowed;
 }
 
+
 @keyframes spin {
   0%   { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
@@ -2845,4 +2846,427 @@ div.score-low { background-color: #c5221f; }
 
 
 
+/* ═══════════════════════════════ COMPANY PROFILE PAGE (REDESIGN) ═══════════════════════════════ */
 
+/* Panel container — constrained width, centered */
+.cp-panel {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  padding-bottom: 6rem; /* Space for sticky footer */
+}
+
+/* ── Page Header ── */
+.cp-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.cp-page-header-text {
+  flex: 1;
+}
+
+.cp-preview-btn {
+  border-radius: 10px;
+  padding: 0.65rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+/* ── Card base ── */
+.cp-card {
+  background: var(--bg-white);
+  border: 1px solid var(--border-light);
+  border-radius: 16px;
+  padding: 1.75rem 2rem;
+  box-shadow: 0 2px 12px rgba(118, 38, 22, 0.03), 0 1px 3px rgba(0,0,0,0.02);
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.cp-card:hover {
+  box-shadow: 0 6px 24px rgba(118, 38, 22, 0.06), 0 1px 4px rgba(0,0,0,0.02);
+  border-color: var(--border-color);
+}
+
+/* Card header (icon + title) */
+.cp-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.cp-card-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: rgba(118, 38, 22, 0.07);
+  color: var(--accent-burgundy);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.cp-card-title {
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-dark);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.cp-card-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0.2rem 0 0 0;
+  line-height: 1.4;
+}
+
+/* ── Company Identity – logo row ── */
+.cp-identity-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.75rem;
+  padding: 1.25rem 1.5rem;
+  background: rgba(118, 38, 22, 0.025);
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+}
+
+.cp-logo-box {
+  width: 80px;
+  height: 80px;
+  border-radius: 14px;
+  background: var(--bg-white);
+  border: 2px solid var(--border-color);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.cp-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cp-logo-fallback {
+  font-family: var(--font-serif);
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--accent-burgundy);
+  opacity: 0.5;
+}
+
+.cp-logo-info {
+  flex: 1;
+}
+
+.cp-logo-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin: 0 0 0.2rem 0;
+}
+
+.cp-logo-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 0 0 0.75rem 0;
+}
+
+.cp-logo-actions {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.cp-upload-btn {
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.cp-remove-btn {
+  background: transparent;
+  color: #D93025;
+  border: 1px solid rgba(217, 48, 37, 0.25);
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.cp-remove-btn:hover {
+  background: rgba(217, 48, 37, 0.05);
+  border-color: rgba(217, 48, 37, 0.5);
+}
+
+.cp-logo-rec {
+  font-size: 0.72rem;
+  color: var(--text-light);
+  margin: 0.6rem 0 0 0;
+  font-style: italic;
+}
+
+/* Recruiter quick-info row inside Identity card */
+.cp-recruiter-info-row {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  margin-top: 1.5rem;
+  padding: 0.9rem 1.25rem;
+  border-radius: 10px;
+  background: rgba(118, 38, 22, 0.025);
+  border: 1px dashed var(--border-color);
+}
+
+.cp-recruiter-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--accent-burgundy);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-serif);
+  font-weight: 800;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.cp-recruiter-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin: 0;
+}
+
+.cp-recruiter-email {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 0.1rem 0 0 0;
+}
+
+/* ── 2-column form grid ── */
+.cp-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem 1.5rem;
+}
+
+.cp-col-full {
+  grid-column: 1 / -1;
+}
+
+/* ── Field label ── */
+.cp-field-label {
+  font-size: 0.83rem;
+  font-weight: 650;
+  color: var(--text-dark);
+  margin-bottom: 6px;
+  display: block;
+}
+
+.cp-required {
+  color: var(--accent-burgundy);
+  margin-left: 2px;
+}
+
+/* ── Universal cp-input ── */
+.cp-input {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  border-radius: 9px;
+  border: 1.5px solid var(--border-color);
+  background-color: var(--bg-white);
+  color: var(--text-dark);
+  font-size: 0.92rem;
+  font-family: var(--font-sans);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.cp-input::placeholder {
+  color: var(--text-light);
+  font-size: 0.88rem;
+}
+
+.cp-input:focus {
+  border-color: var(--accent-burgundy);
+  box-shadow: 0 0 0 3.5px rgba(144, 48, 27, 0.08);
+}
+
+.cp-input:hover:not(:focus):not(:disabled) {
+  border-color: var(--text-light);
+}
+
+/* Textarea overrides height */
+.cp-textarea {
+  height: auto;
+  min-height: 160px;
+  padding: 14px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+/* Input with icon prefix */
+.cp-input-icon-wrap {
+  position: relative;
+}
+
+.cp-input-icon {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-light);
+  pointer-events: none;
+}
+
+.cp-input-has-icon {
+  padding-left: 38px;
+}
+
+/* Select wrapper (custom chevron) */
+.cp-select-wrapper {
+  position: relative;
+}
+
+.cp-select {
+  cursor: pointer;
+  padding-right: 36px;
+  background-image: none; /* Remove native arrow */
+}
+
+.cp-select-chevron {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--text-muted);
+}
+
+/* Disabled state */
+.cp-input-disabled {
+  background-color: rgba(118, 38, 22, 0.02);
+  cursor: not-allowed;
+  color: var(--text-muted);
+  border-color: var(--border-light);
+}
+
+.cp-input-verified {
+  color: #137333;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+/* Character counter */
+.cp-char-count {
+  text-align: right;
+  font-size: 0.75rem;
+  color: var(--text-light);
+  margin-top: 6px;
+}
+
+/* Verified notice */
+.cp-verified-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+  padding: 0.9rem 1.1rem;
+  background: rgba(118, 38, 22, 0.03);
+  border: 1px solid rgba(118, 38, 22, 0.08);
+  border-radius: 10px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.cp-verified-notice svg {
+  color: var(--accent-burgundy);
+}
+
+/* ── Action footer (pinned at the bottom of the scroll area) ── */
+.cp-action-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.25rem 0;
+  border-top: 1px solid var(--border-light);
+}
+
+.cp-save-btn {
+  border-radius: 10px;
+  padding: 0.7rem 1.6rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+}
+
+.cp-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* ── Responsive: stack to 1 column on small viewports ── */
+@media (max-width: 720px) {
+  .cp-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cp-identity-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .cp-page-header {
+    flex-direction: column;
+  }
+
+  .cp-preview-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .cp-panel {
+    padding-bottom: 5rem;
+  }
+
+  .cp-card {
+    padding: 1.25rem 1.25rem;
+  }
+}

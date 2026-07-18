@@ -790,7 +790,9 @@ export class RecruiterDashboard implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.isSubmittingJob.set(false);
-        const errorMsg = err.error?.message || err.error?.error || 'Failed to save the job posting.';
+
+        // Extract real error message from backend ApiResponse body
+        const backendMsg: string = err.error?.message || err.error?.error || '';
 
         if (err.status === 0) {
           console.warn('Backend server down. Activating developer mock save fallback...', err);
@@ -827,8 +829,11 @@ export class RecruiterDashboard implements OnInit, OnDestroy {
             this.selectMenu('all-jobs');
             this.jobSuccessMessage.set(null);
           }, 1500);
+        } else if (backendMsg.toLowerCase().includes('company') || backendMsg.toLowerCase().includes('recruiter profile')) {
+          // Recruiter hasn't completed company onboarding yet
+          this.jobErrorMessage.set('⚠️ Your company profile is not set up yet. Please go to Company Profile and save your company details before posting a job.');
         } else {
-          this.jobErrorMessage.set(errorMsg);
+          this.jobErrorMessage.set(backendMsg || 'Failed to save the job posting. Please try again.');
         }
       }
     });
