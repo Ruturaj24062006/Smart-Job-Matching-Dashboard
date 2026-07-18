@@ -53,6 +53,7 @@ public class ResumeService {
      * 5. Deactivate previous resumes for this student
      * 6. Fire JobMatchingRequestedEvent → triggers hybrid RAG matching pipeline
      */
+    @Transactional
     public void processResume(UUID resumeId) {
         long startProcess = System.currentTimeMillis();
         log.info("[RAG_PIPELINE][STAGE 1] Starting processing for resume ID: {}", resumeId);
@@ -90,8 +91,10 @@ public class ResumeService {
             long tDb = System.currentTimeMillis();
             log.info("[RAG_PIPELINE][STAGE 4] Deserializing structured JSON and updating PostgreSQL student profile...");
             ExtractedProfile profile = objectMapper.readValue(jsonProfile, ExtractedProfile.class);
-            Student student = resume.getStudent();
+            Student student = studentRepository.findById(resume.getStudent().getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + resume.getStudent().getId()));
             updateStudentProfile(student, profile);
+
             log.info("[RAG_PIPELINE][STAGE 4] PostgreSQL profile updated in {} ms. Skills: {}, Experience: {}, Projects: {}",
                     System.currentTimeMillis() - tDb,
                     student.getSkills() != null ? student.getSkills().size() : 0,

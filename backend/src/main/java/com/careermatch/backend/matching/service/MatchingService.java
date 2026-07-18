@@ -97,18 +97,30 @@ public class MatchingService {
         Match match;
         if (existingOpt.isPresent()) {
             match = existingOpt.get();
+            match.setScore(score);
             match.setCompositeScore(score);
             match.setEligibilityStatus(eligible);
         } else {
             match = Match.builder()
                     .student(student)
                     .job(job)
+                    .score(score)
                     .compositeScore(score)
                     .eligibilityStatus(eligible)
                     .build();
         }
-        return matchRepository.save(match);
+
+        try {
+            return matchRepository.saveAndFlush(match);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            Match existing = matchRepository.findByStudentIdAndJobId(student.getId(), job.getId()).orElse(match);
+            existing.setScore(score);
+            existing.setCompositeScore(score);
+            existing.setEligibilityStatus(eligible);
+            return matchRepository.save(existing);
+        }
     }
+
 
     // ──────────────────────────────────────────────────────────────────────────
     //  Query — with Redis cache
