@@ -1512,6 +1512,201 @@
   font-weight: 600;
 }
 
+/* 3-Step Onboarding Hero Banner */
+.job-board-onboarding-card {
+  padding: 2.5rem;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  margin-bottom: 2.5rem;
+}
+
+.onboarding-main-title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.02em;
+}
+
+.accent-orange {
+  color: #f97316;
+  background: linear-gradient(135deg, #f97316, #fb923c);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.onboarding-main-subtitle {
+  font-size: 1rem;
+  color: #9ca3af;
+  max-width: 720px;
+  margin: 0 auto 2.25rem;
+  line-height: 1.6;
+}
+
+.three-steps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2.25rem;
+}
+
+@media (max-width: 868px) {
+  .three-steps-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.step-card-box {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 1.75rem;
+  position: relative;
+  transition: all 0.25 ease;
+}
+
+.step-card-box:hover {
+  border-color: rgba(249, 115, 22, 0.3);
+  background: rgba(255, 255, 255, 0.035);
+  transform: translateY(-2px);
+}
+
+.step-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.step-number-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #f97316;
+  color: #ffffff;
+  font-size: 1.2rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.4);
+}
+
+.step-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.badge-start {
+  background: rgba(249, 115, 22, 0.15);
+  color: #fb923c;
+  border: 1px solid rgba(249, 115, 22, 0.3);
+}
+
+.badge-next {
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.badge-final {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.step-card-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #f3f4f6;
+  margin-bottom: 0.5rem;
+}
+
+.step-card-desc {
+  font-size: 0.88rem;
+  color: #9ca3af;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Onboarding CTA Callout */
+.onboarding-cta-callout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  background: rgba(249, 115, 22, 0.05);
+  border: 1px dashed rgba(249, 115, 22, 0.3);
+  border-radius: 14px;
+  padding: 1.25rem 1.75rem;
+}
+
+@media (max-width: 768px) {
+  .onboarding-cta-callout {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+.callout-left-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(249, 115, 22, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cta-arrow-icon {
+  width: 24px;
+  height: 24px;
+  color: #f97316;
+}
+
+.callout-text-group {
+  flex: 1;
+}
+
+.callout-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 0.2rem;
+}
+
+.callout-desc {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  margin: 0;
+}
+
+.upload-hero-btn {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  color: #ffffff;
+  border: none;
+  font-weight: 700;
+  padding: 0.85rem 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 18px rgba(249, 115, 22, 0.35);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.upload-hero-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(249, 115, 22, 0.5);
+  background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
+}
+
+
 
 
 

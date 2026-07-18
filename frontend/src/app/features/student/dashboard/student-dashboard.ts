@@ -121,21 +121,25 @@ export class StudentDashboard implements OnInit {
         if (res.success && res.data) {
           const profileData = res.data;
           this.profile.set(profileData);
-          if (profileData.profileCompletedPct < 85) {
-            this.router.navigate(['/student/resume-upload']);
-          } else {
-            // Profile is complete, load dashboard metrics
-            this.loadDashboardData();
-          }
         } else {
-          this.loadMockProfileAndDashboard();
+          this.profile.set({
+            id: '00000000-0000-0000-0000-000000000000',
+            firstName: this.getStudentName(),
+            lastName: '',
+            profileCompletedPct: 0
+          } as any);
         }
+        this.loadDashboardData();
       },
       error: (err) => {
         console.error('Error fetching profile completeness, fallback to mock...', err);
         this.loadMockProfileAndDashboard();
       }
     });
+  }
+
+  navigateToResumeUpload(): void {
+    this.router.navigate(['/student/resume-upload']);
   }
 
   private loadMockProfileAndDashboard(): void {
