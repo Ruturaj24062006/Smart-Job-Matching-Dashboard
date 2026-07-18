@@ -1,11 +1,12 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
 
 export interface UserSession {
   userId: string;
   email: string;
-  role: string;
+  role: string; // Always normalized to ROLE_STUDENT | ROLE_RECRUITER | ROLE_ADMIN
 }
 
 export interface LoginResponse {
@@ -25,6 +26,7 @@ export class AuthService {
   // Signals for state management
   readonly currentUser = signal<UserSession | null>(null);
   readonly isAuthenticated = computed(() => this.currentUser() !== null);
+  /** True while session is being restored from localStorage on startup. Guards must wait for this to become false. */
   readonly isAuthLoading = signal<boolean>(true);
 
   constructor(private readonly http: HttpClient) {
@@ -91,16 +93,51 @@ export class AuthService {
     return localStorage.getItem('access_token');
   }
 
-  private saveSession(data: LoginResponse): void {
+  /** Returns the current user's role normalized to uppercase (e.g. ROLE_STUDENT). */
+  getCurrentRole(): string | null {
+    const user = this.currentUser();
+    if (!user?.role) return null;
+    return normalizeRole(user.role);
+  }
+
+  /**
+   * Centralized dashboard redirect — the single source of truth for
+   * "where does this role go after login / session restore / guard redirect".
+   */
+  redirectToDashboard(router: Router, role?: string): void {
+    const r = normalizeRole(role ?? this.getCurrentRole() ?? '');
+    switch (r) {
+      case 'ROLE_STUDENT':
+        router.navigate(['/student/dashboard']);
+        break;
+      case 'ROLE_RECRUITER':
+        router.navigate(['/recruiter/dashboard']);
+        break;
+      case 'ROLE_ADMIN':
+        router.navigate(['/admin/dashboard']);
+        break;
+      default:
+        // Unknown / missing role — send to login, not to unauthorized
+        router.navigate(['/login']);
+        break;
+    }
+  }
+
+  // ─── Private Helpers ────────────────────────────────────────────────────────
+
+  saveSession(data: LoginResponse): void {
     localStorage.setItem('access_token', data.accessToken);
     localStorage.setItem('refresh_token', data.refreshToken);
-    
+
+    // Derive email: prefer response field, then fall back to JWT sub claim
+    const email = data.email ?? extractEmailFromJwt(data.accessToken) ?? '';
+
     const session: UserSession = {
       userId: data.userId,
-      email: data.email,
-      role: data.role
+      email,
+      role: normalizeRole(data.role)
     };
-    
+
     localStorage.setItem('user_session', JSON.stringify(session));
     this.currentUser.set(session);
   }
@@ -110,9 +147,11 @@ export class AuthService {
     try {
       const sessionStr = localStorage.getItem('user_session');
       const token = localStorage.getItem('access_token');
-      
+
       if (sessionStr && token) {
-        const session: UserSession = JSON.parse(sessionStr);
+        const raw: UserSession = JSON.parse(sessionStr);
+        // Always normalize the stored role in case localStorage has stale casing
+        const session: UserSession = { ...raw, role: normalizeRole(raw.role) };
         this.currentUser.set(session);
       }
     } catch (e) {
@@ -121,5 +160,26 @@ export class AuthService {
     } finally {
       this.isAuthLoading.set(false);
     }
+  }
+}
+
+// ─── Pure utility functions (exported for use in guards / components) ─────────
+
+/** Normalizes any role string to uppercase ROLE_ prefix form. */
+export function normalizeRole(role: string): string {
+  if (!role) return '';
+  const upper = role.trim().toUpperCase();
+  return upper.startsWith('ROLE_') ? upper : `ROLE_${upper}`;
+}
+
+/** Decodes the email claim from a JWT without verifying signature (client-side only). */
+function extractEmailFromJwt(token: string): string | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return payload.email ?? payload.sub ?? null;
+  } catch {
+    return null;
   }
 }
