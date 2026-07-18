@@ -43,10 +43,28 @@ export class Login implements OnInit {
         // This Client ID matches the configuration they are performing in Supabase Auth settings.
         const clientId = '562305543169-qgghq9tr4v4o0npsqg27sc6ndv7b0688.apps.googleusercontent.com';
         
+        if ((window as any).googleInitialized) {
+          const btnContainer = document.getElementById('googleBtn');
+          if (btnContainer) {
+            (window as any).google.accounts.id.renderButton(
+              btnContainer,
+              { 
+                theme: 'outline', 
+                size: 'large',
+                width: 320,
+                text: 'continue_with',
+                shape: 'rectangular'
+              }
+            );
+          }
+          return;
+        }
+
         (window as any).google.accounts.id.initialize({
           client_id: clientId,
           callback: this.handleGoogleCredential.bind(this)
         });
+        (window as any).googleInitialized = true;
 
         const btnContainer = document.getElementById('googleBtn');
         if (btnContainer) {
