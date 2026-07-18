@@ -169,7 +169,8 @@ export class StudentDashboard implements OnInit, OnDestroy {
   }
 
   navigateToResumeUpload(): void {
-    this.router.navigate(['/student/resume-upload']);
+    // Open the built-in upload modal instead of navigating away from the dashboard
+    this.openUploadModal();
   }
 
   private loadMockProfileAndDashboard(): void {
