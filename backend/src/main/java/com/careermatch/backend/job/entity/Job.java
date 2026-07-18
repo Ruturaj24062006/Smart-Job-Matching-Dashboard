@@ -79,9 +79,10 @@ public class Job {
     private JobStatus status = JobStatus.DRAFT;
 
     // Vector embedding for dense search (384 dimensions)
-    @Convert(converter = com.careermatch.backend.common.converter.PgVectorConverter.class)
+    @org.hibernate.annotations.Type(com.careermatch.backend.common.converter.PgVectorUserType.class)
     @Column(name = "embedding", columnDefinition = "vector(384)")
     private float[] embedding;
+
 
     // Full-Text Search tsvector (auto-computed by PostgreSQL)
     @Column(name = "fts", columnDefinition = "tsvector", insertable = false, updatable = false)

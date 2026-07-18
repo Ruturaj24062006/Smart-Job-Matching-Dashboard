@@ -2,12 +2,14 @@ package com.careermatch.backend.common.converter;
 
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
+import org.postgresql.util.PGobject;
+
+import java.sql.SQLException;
 
 @Converter
-public class PgVectorConverter implements AttributeConverter<float[], String> {
+public class PgVectorConverter implements AttributeConverter<float[], PGobject> {
 
-    @Override
-    public String convertToDatabaseColumn(float[] attribute) {
+    public static String toVectorString(float[] attribute) {
         if (attribute == null || attribute.length == 0) {
             return null;
         }
@@ -23,11 +25,26 @@ public class PgVectorConverter implements AttributeConverter<float[], String> {
     }
 
     @Override
-    public float[] convertToEntityAttribute(String dbData) {
-        if (dbData == null || dbData.isBlank()) {
+    public PGobject convertToDatabaseColumn(float[] attribute) {
+        if (attribute == null || attribute.length == 0) {
             return null;
         }
-        String clean = dbData.trim();
+        try {
+            PGobject pgObject = new PGobject();
+            pgObject.setType("vector");
+            pgObject.setValue(toVectorString(attribute));
+            return pgObject;
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to convert float[] to PGobject vector", e);
+        }
+    }
+
+    @Override
+    public float[] convertToEntityAttribute(PGobject dbData) {
+        if (dbData == null || dbData.getValue() == null) {
+            return null;
+        }
+        String clean = dbData.getValue().trim();
         if (clean.startsWith("[")) {
             clean = clean.substring(1);
         }
@@ -46,3 +63,5 @@ public class PgVectorConverter implements AttributeConverter<float[], String> {
         return result;
     }
 }
+
+

@@ -40,9 +40,10 @@ public class Resume {
     private String processingStatus;
 
     // Vector embedding for dense search (384 dimensions)
-    @Convert(converter = com.careermatch.backend.common.converter.PgVectorConverter.class)
+    @org.hibernate.annotations.Type(com.careermatch.backend.common.converter.PgVectorUserType.class)
     @Column(name = "embedding", columnDefinition = "vector(384)")
     private float[] embedding;
+
 
     @Column(name = "is_current", nullable = false)
     @Builder.Default

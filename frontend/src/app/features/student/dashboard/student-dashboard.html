@@ -110,7 +110,7 @@
           <ul class="nav-links-list">
             <!-- Find & Search Jobs → navigates to /student/find-jobs -->
             <li class="nav-link-item" [class.active]="activeTab() === 'discover'"
-                (click)="router.navigate(['/student/find-jobs'])">
+                (click)="changeTab('discover')">
               <svg class="nav-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="11" cy="11" r="8"/>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -219,57 +219,20 @@
           </div>
         </div>
 
-        <!-- Split Option Panel (Quick Form vs Upload Resume) -->
-        <div class="split-onboarding-options" style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 2rem; margin-top: 2rem; border-top: 1px solid #f3ebd8; padding-top: 2rem;">
-          
-          <!-- Option A: Quick Profile Form -->
-          <div class="quick-form-card" style="background: rgba(255,255,255,0.6); padding: 1.5rem; border-radius: 12px; border: 1px solid #e7e0d6; box-shadow: 0 4px 10px rgba(0,0,0,0.02); text-align: left;">
-            <h3 style="font-size: 1.15rem; font-weight: 800; color: #991b1b; margin-bottom: 0.25rem;">Option A: Quick Onboarding (No Resume)</h3>
-            <p style="font-size: 0.82rem; color: #6b7280; margin-bottom: 1.25rem;">Fill out your target job preferences and skills manually to get matches instantly.</p>
-
-            <div *ngIf="quickProfileSuccessMessage()" class="alert alert-success" style="margin-bottom: 1rem; font-size: 0.85rem; padding: 0.6rem 0.85rem;">
-              {{ quickProfileSuccessMessage() }}
-            </div>
-            <div *ngIf="quickProfileErrorMessage()" class="alert alert-error" style="margin-bottom: 1rem; font-size: 0.85rem; padding: 0.6rem 0.85rem;">
-              {{ quickProfileErrorMessage() }}
-            </div>
-
-            <div style="display: flex; flex-direction: column; gap: 0.85rem;">
-              <div class="form-group" style="margin-bottom: 0;">
-                <label style="font-size: 0.76rem; font-weight: 700; color: #4b5563; text-transform: uppercase; margin-bottom: 0.3rem; display: block;">Target Job Title / Role *</label>
-                <input type="text" [ngModel]="quickTargetRole()" (ngModelChange)="quickTargetRole.set($event)" placeholder="e.g. Software Engineer, Java Developer" class="form-input" style="padding: 0.55rem 0.85rem; border-radius: 6px; font-size: 0.85rem; border: 1px solid #e2d7c5; width: 100%; box-sizing: border-box;">
-              </div>
-
-              <div class="form-group" style="margin-bottom: 0;">
-                <label style="font-size: 0.76rem; font-weight: 700; color: #4b5563; text-transform: uppercase; margin-bottom: 0.3rem; display: block;">Key Skills (comma-separated) *</label>
-                <input type="text" [ngModel]="quickSkills()" (ngModelChange)="quickSkills.set($event)" placeholder="e.g. Java, Spring Boot, Angular, Git" class="form-input" style="padding: 0.55rem 0.85rem; border-radius: 6px; font-size: 0.85rem; border: 1px solid #e2d7c5; width: 100%; box-sizing: border-box;">
-              </div>
-
-              <div class="form-group" style="margin-bottom: 0;">
-                <label style="font-size: 0.76rem; font-weight: 700; color: #4b5563; text-transform: uppercase; margin-bottom: 0.3rem; display: block;">Preferred Location *</label>
-                <input type="text" [ngModel]="quickLocation()" (ngModelChange)="quickLocation.set($event)" placeholder="e.g. Pune, Mumbai, Remote" class="form-input" style="padding: 0.55rem 0.85rem; border-radius: 6px; font-size: 0.85rem; border: 1px solid #e2d7c5; width: 100%; box-sizing: border-box;">
-              </div>
-
-              <button type="button" class="btn btn-primary" style="margin-top: 0.5rem; background: #991b1b; color: #fff; padding: 0.65rem; font-size: 0.85rem; font-weight: 700; border-radius: 6px; border: none; width: 100%; cursor: pointer;" [disabled]="isSavingQuickProfile()" (click)="saveQuickProfile()">
-                <span *ngIf="!isSavingQuickProfile()">Save & Generate Matches ⚡</span>
-                <span *ngIf="isSavingQuickProfile()" class="spinner-inline"></span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Option B: Upload Resume -->
-          <div class="quick-upload-card" style="display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(153, 27, 27, 0.02); padding: 1.5rem; border-radius: 12px; border: 1px dashed #e2d7c5; text-align: center;">
-            <div style="font-size: 2.25rem; margin-bottom: 0.5rem;">📄</div>
-            <h3 style="font-size: 1.15rem; font-weight: 800; color: #374151; margin-bottom: 0.25rem;">Option B: Upload Resume</h3>
-            <p style="font-size: 0.82rem; color: #6b7280; margin-bottom: 1.5rem; max-width: 280px; line-height: 1.4;">Or, upload your PDF/DOCX resume file to let NEXUS AI extract your details and preferences automatically.</p>
-            <button type="button" class="btn btn-primary upload-hero-btn" style="background: #991b1b; color: #fff; padding: 0.75rem 1.75rem; font-size: 0.88rem; font-weight: 700; border-radius: 6px; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(153, 27, 27, 0.25);" (click)="openUploadModal()">
+        <!-- Centered Resume Upload Option -->
+        <div class="split-onboarding-options" style="display: flex; justify-content: center; margin-top: 2rem; border-top: 1px solid #f3ebd8; padding-top: 2rem;">
+          <div class="quick-upload-card" style="display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(153, 27, 27, 0.02); padding: 2rem 3rem; border-radius: 12px; border: 1px dashed #e2d7c5; text-align: center; max-width: 480px; width: 100%;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">📄</div>
+            <h3 style="font-size: 1.25rem; font-weight: 800; color: #374151; margin-bottom: 0.5rem;">Upload Resume</h3>
+            <p style="font-size: 0.85rem; color: #6b7280; margin-bottom: 1.5rem; line-height: 1.5;">Upload your PDF/DOCX resume file to let NEXUS AI extract your details, experience, skills, and target job preferences automatically.</p>
+            <button type="button" class="btn btn-primary upload-hero-btn" style="background: #991b1b; color: #fff; padding: 0.75rem 2rem; font-size: 0.9rem; font-weight: 700; border-radius: 6px; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(153, 27, 27, 0.25);" (click)="openUploadModal()">
               Upload Resume
             </button>
-            <span style="font-size: 0.7rem; color: #9ca3af; margin-top: 0.5rem;">PDF, DOCX up to 10MB</span>
+            <span style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.75rem;">PDF, DOCX up to 10MB</span>
           </div>
-
         </div>
       </div>
+
 
       <!-- RECOMMENDATIONS SECTION -->
       <div class="recommendations-section animate-fade-in" *ngIf="activeTab() === 'recommendations'">

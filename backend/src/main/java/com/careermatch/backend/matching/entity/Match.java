@@ -36,8 +36,12 @@ public class Match {
     @Column(name = "sparse_score")
     private Double sparseScore;
 
+    @Column(name = "score")
+    private Double score;
+
     @Column(name = "composite_score")
     private Double compositeScore;
+
 
     @Column(name = "eligibility_status", nullable = false)
     @Builder.Default
@@ -46,8 +50,9 @@ public class Match {
     @Column(name = "explanation", columnDefinition = "TEXT")
     private String explanation;
 
-    @Column(name = "skill_gap", columnDefinition = "jsonb")
+    @Column(name = "skill_gap", columnDefinition = "TEXT")
     private String skillGap;
+
 
     @Column(name = "career_insights", columnDefinition = "TEXT")
     private String careerInsights;

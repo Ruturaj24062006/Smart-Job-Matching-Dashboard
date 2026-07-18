@@ -114,85 +114,7 @@ export class StudentDashboard implements OnInit, OnDestroy {
     });
   });
 
-  // Quick onboarding form inputs
-  quickTargetRole = signal<string>('');
-  quickSkills = signal<string>('');
-  quickLocation = signal<string>('');
-  isSavingQuickProfile = signal<boolean>(false);
-  quickProfileSuccessMessage = signal<string | null>(null);
-  quickProfileErrorMessage = signal<string | null>(null);
 
-  saveQuickProfile(): void {
-    const role = this.quickTargetRole().trim();
-    const skillsStr = this.quickSkills().trim();
-    const location = this.quickLocation().trim();
-
-    if (!role || !skillsStr || !location) {
-      this.quickProfileErrorMessage.set('Please fill out all the fields.');
-      return;
-    }
-
-    this.isSavingQuickProfile.set(true);
-    this.quickProfileErrorMessage.set(null);
-    this.quickProfileSuccessMessage.set(null);
-
-    // Map skills string to SkillDto array
-    const skillList = skillsStr.split(',')
-      .map(s => s.trim())
-      .filter(Boolean)
-      .map(name => ({
-        name: name,
-        proficiencyLevel: 'INTERMEDIATE'
-      }));
-
-    // Format career preferences string
-    const prefs = [
-      `Role: ${role}`,
-      `City: ${location}`,
-      `Mode: HYBRID`
-    ].filter(Boolean).join('; ');
-
-    // Construct profile update DTO (retaining existing profile if available, else defaulting)
-    const existing = this.profile();
-    const dto: any = {
-      firstName: existing?.firstName || this.getStudentName(),
-      lastName: existing?.lastName || '',
-      bio: existing?.bio || `Actively searching for ${role} opportunities.`,
-      githubUrl: existing?.githubUrl || '',
-      linkedinUrl: existing?.linkedinUrl || '',
-      portfolioUrl: existing?.portfolioUrl || '',
-      careerPreferences: prefs,
-      languages: existing?.languages || 'English',
-      skills: skillList,
-      projects: existing?.projects || [],
-      experience: existing?.experience || [],
-      education: existing?.education || [],
-      profileCompletedPct: 100 // Set to 100% since onboarding completes
-    };
-
-    this.profileService.updateProfile(dto).subscribe({
-      next: (res) => {
-        // Trigger matching generation in backend
-        this.matchesService.generateMatches().subscribe({
-          next: () => {
-            this.isSavingQuickProfile.set(false);
-            this.quickProfileSuccessMessage.set('Profile saved and job matches generated successfully!');
-            // Reload dashboard profile and matches list
-            this.checkProfileCompletenessAndLoad();
-          },
-          error: (err) => {
-            this.isSavingQuickProfile.set(false);
-            this.quickProfileSuccessMessage.set('Profile saved successfully!');
-            this.checkProfileCompletenessAndLoad();
-          }
-        });
-      },
-      error: (err) => {
-        this.isSavingQuickProfile.set(false);
-        this.quickProfileErrorMessage.set(err.error?.message || 'Failed to save profile. Please try again.');
-      }
-    });
-  }
 
   constructor(
     private readonly authService: AuthService,
@@ -205,11 +127,14 @@ export class StudentDashboard implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.updateGreeting();
     const currentUrl = this.router.url;
-    if (currentUrl.includes('find-jobs') || currentUrl.includes('jobs') || currentUrl.includes('discover')) {
+    if (currentUrl.endsWith('/find-jobs') || currentUrl.endsWith('/jobs')) {
       this.activeTab.set('discover');
       this.searchJobs();
     } else if (currentUrl.includes('applications')) {
       this.activeTab.set('applications');
+    } else {
+      // Always stay on recommendations (Dashboard view) when opening /student/dashboard
+      this.activeTab.set('recommendations');
     }
     this.checkProfileCompletenessAndLoad();
   }
@@ -520,17 +445,6 @@ export class StudentDashboard implements OnInit, OnDestroy {
     if (tab === 'discover') {
       if (this.searchResults().length === 0) {
         this.searchJobs();
-      }
-      if (typeof window !== 'undefined') {
-        window.history.replaceState({}, '', '/student/find-jobs');
-      }
-    } else if (tab === 'recommendations') {
-      if (typeof window !== 'undefined') {
-        window.history.replaceState({}, '', '/student/dashboard');
-      }
-    } else if (tab === 'applications') {
-      if (typeof window !== 'undefined') {
-        window.history.replaceState({}, '', '/student/dashboard');
       }
     }
   }
@@ -940,8 +854,7 @@ export class StudentDashboard implements OnInit, OnDestroy {
 
   private onConfirmSuccess(): void {
     this.closeUploadModal();
-    this.router.navigate(['/student/find-jobs']);
-
+    this.changeTab('discover');
   }
 
   respondToInterview(applicationId: string, response: string): void {
