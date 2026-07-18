@@ -90,24 +90,29 @@ export class Register {
         }
       },
       error: (err) => {
-        console.warn('Backend server down. Activating developer mock registration fallback...', err);
-        const mockData = {
-          accessToken: 'mock_access_token_123',
-          refreshToken: 'mock_refresh_token_123',
-          email: payload.email,
-          role: payload.role,
-          userId: '00000000-0000-0000-0000-000000000000'
-        };
-        (this.authService as any).saveSession(mockData);
         this.isLoading.set(false);
-        this.successMessage.set('Registration successful! Redirecting to dashboard...');
-        setTimeout(() => {
-          if (payload.role === 'ROLE_RECRUITER') {
-            this.router.navigate(['/recruiter/dashboard']);
-          } else {
-            this.router.navigate(['/student/dashboard']);
-          }
-        }, 1500);
+        if (err.status === 0) {
+          console.warn('Backend server down. Activating developer mock registration fallback...', err);
+          const mockData = {
+            accessToken: 'mock_access_token_123',
+            refreshToken: 'mock_refresh_token_123',
+            email: payload.email,
+            role: payload.role,
+            userId: '00000000-0000-0000-0000-000000000000'
+          };
+          (this.authService as any).saveSession(mockData);
+          this.successMessage.set('Registration successful! Redirecting to dashboard...');
+          setTimeout(() => {
+            if (payload.role === 'ROLE_RECRUITER') {
+              this.router.navigate(['/recruiter/dashboard']);
+            } else {
+              this.router.navigate(['/student/dashboard']);
+            }
+          }, 1500);
+        } else {
+          const backendMsg = err.error?.message || err.error?.error || 'Registration failed. Please try again.';
+          this.errorMessage.set(backendMsg);
+        }
       }
     });
   }

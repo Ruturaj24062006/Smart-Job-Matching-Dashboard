@@ -126,27 +126,31 @@ export class Login implements OnInit {
         }
       },
       error: (err: any) => {
-        console.warn('Backend server down. Activating developer mock session fallback...', err);
-        const email = this.loginForm.value.email.toLowerCase();
-        let role = 'ROLE_STUDENT';
-        if (email.includes('admin')) {
-          role = 'ROLE_ADMIN';
-        } else if (email.includes('recruiter')) {
-          role = 'ROLE_RECRUITER';
-        }
-
-        const mockData = {
-          accessToken: 'mock_access_token_123',
-          refreshToken: 'mock_refresh_token_123',
-          email: this.loginForm.value.email,
-          role: role,
-          userId: '00000000-0000-0000-0000-000000000000'
-        };
-
-        // Access saveSession via typed or type-cast call
-        (this.authService as any).saveSession(mockData);
         this.isLoading.set(false);
-        this.redirectBasedOnRole(role);
+        if (err.status === 0) {
+          console.warn('Backend server down. Activating developer mock session fallback...', err);
+          const email = this.loginForm.value.email.toLowerCase();
+          let role = 'ROLE_STUDENT';
+          if (email.includes('admin')) {
+            role = 'ROLE_ADMIN';
+          } else if (email.includes('recruiter')) {
+            role = 'ROLE_RECRUITER';
+          }
+
+          const mockData = {
+            accessToken: 'mock_access_token_123',
+            refreshToken: 'mock_refresh_token_123',
+            email: this.loginForm.value.email,
+            role: role,
+            userId: '00000000-0000-0000-0000-000000000000'
+          };
+
+          (this.authService as any).saveSession(mockData);
+          this.redirectBasedOnRole(role);
+        } else {
+          const backendMsg = err.error?.message || err.error?.error || 'Login failed. Please check your credentials.';
+          this.errorMessage.set(backendMsg);
+        }
       }
     });
   }
