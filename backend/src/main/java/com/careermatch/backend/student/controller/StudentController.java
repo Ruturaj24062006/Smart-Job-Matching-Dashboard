@@ -2,6 +2,7 @@ package com.careermatch.backend.student.controller;
 
 import com.careermatch.backend.auth.entity.User;
 import com.careermatch.backend.auth.repository.UserRepository;
+import java.util.UUID;
 import com.careermatch.backend.common.ApiResponse;
 import com.careermatch.backend.exception.BadRequestException;
 import com.careermatch.backend.student.dto.StudentProfileDto;
