@@ -107,8 +107,9 @@ public class ResumeController {
             // ── Step 2: Extract text from the temp file ───────────────────────────
             long startParse = System.currentTimeMillis();
             try (InputStream is = fileStorageService.getFileAsStream(storedFilename)) {
-                parsedText = pdfParserService.parsePdf(is);
+                parsedText = pdfParserService.parseDocument(is, origName);
             }
+
             long parseDuration = System.currentTimeMillis() - startParse;
             log.info("[TIMING] PDF parsing call took {} ms (length = {} chars).", parseDuration, parsedText.length());
 

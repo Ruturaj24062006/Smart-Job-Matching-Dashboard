@@ -30,8 +30,28 @@ public class PdfParserService {
     /** Re-use a single Tika instance (heavy init cost); it is thread-safe. */
     private final Tika tika = new Tika();
 
+    public String parseDocument(InputStream inputStream, String filename) throws IOException {
+        if (filename != null && (filename.toLowerCase().endsWith(".docx") || filename.toLowerCase().endsWith(".doc"))) {
+            log.info("[DOCUMENT] Extracting DOCX text directly using Apache Tika...");
+            long tDoc = System.currentTimeMillis();
+            try {
+                String text = tika.parseToString(inputStream);
+                String cleaned = cleanText(text);
+                log.info("[RAG_PIPELINE][STAGE 1-2] Apache Tika DOCX extraction took {} ms ({} chars)",
+                        System.currentTimeMillis() - tDoc, cleaned.length());
+                return cleaned;
+            } catch (Exception e) {
+                log.warn("[DOCUMENT] Apache Tika DOCX parsing failed ({} ms): {}. Falling back to PDF stream parser.",
+                        System.currentTimeMillis() - tDoc, e.getMessage());
+            }
+        }
+        return parsePdf(inputStream);
+    }
+
+
     public String parsePdf(InputStream inputStream) throws IOException {
         long startTotal = System.currentTimeMillis();
+
 
         // Read the full stream into memory once — avoids repeated disk I/O across fallbacks.
         byte[] pdfBytes = inputStream.readAllBytes();

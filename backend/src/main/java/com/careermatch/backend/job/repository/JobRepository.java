@@ -42,8 +42,9 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
         LIMIT :limit
         """, nativeQuery = true)
     List<Job> searchHybrid(
-        @Param("queryVector") float[] queryVector,
+        @Param("queryVector") String queryVector,
         @Param("queryText") String queryText,
         @Param("limit") int limit
     );
+
 }

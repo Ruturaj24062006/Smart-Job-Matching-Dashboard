@@ -6,8 +6,7 @@ import jakarta.persistence.Converter;
 @Converter
 public class PgVectorConverter implements AttributeConverter<float[], String> {
 
-    @Override
-    public String convertToDatabaseColumn(float[] attribute) {
+    public static String toVectorString(float[] attribute) {
         if (attribute == null || attribute.length == 0) {
             return null;
         }
@@ -21,6 +20,12 @@ public class PgVectorConverter implements AttributeConverter<float[], String> {
         sb.append("]");
         return sb.toString();
     }
+
+    @Override
+    public String convertToDatabaseColumn(float[] attribute) {
+        return toVectorString(attribute);
+    }
+
 
     @Override
     public float[] convertToEntityAttribute(String dbData) {

@@ -36,6 +36,7 @@ public class SearchService {
      *   - Fusion: Reciprocal Rank Fusion (k=60) in SQL
      */
     public List<Job> searchJobsForStudent(Student student, int limit) {
+        long tStart = System.currentTimeMillis();
         Resume resume = resumeRepository.findByStudentIdAndIsCurrentTrue(student.getId())
                 .orElse(null);
 
@@ -45,10 +46,10 @@ public class SearchService {
 
         float[] embeddingVector;
         if (isResumeValid) {
-            log.info("Using primary source (Resume embedding) for student {}", student.getId());
+            log.info("[RAG_PIPELINE][STAGE 7] Using primary source (Resume embedding from structured profile) for student {}", student.getId());
             embeddingVector = resume.getEmbedding();
         } else {
-            log.warn("Resume is missing or processing failed for student {}. Using Profile fallback for vector generation.", student.getId());
+            log.warn("[RAG_PIPELINE][STAGE 7] Resume missing/failed for student {}. Using Profile fallback for vector generation.", student.getId());
             String profileText = buildProfileText(student);
             embeddingVector = embeddingService.generateEmbedding(profileText);
         }
@@ -57,14 +58,22 @@ public class SearchService {
         String keywords = buildKeywordString(student, isResumeValid ? resume : null);
 
         if (keywords.isBlank()) {
-            log.warn("Student {} has no skills or resume text — returning all active jobs.", student.getId());
+            log.warn("[RAG_PIPELINE][STAGE 8] Student {} has no skills/resume keywords — returning all active jobs.", student.getId());
             return jobRepository.findByStatus(JobStatus.ACTIVE);
         }
 
-        log.info("Performing hybrid RRF search (top {}) for student {} | keywords: '{}'",
-                limit, student.getId(), keywords);
-        return jobRepository.searchHybrid(embeddingVector, keywords, limit);
+        String vectorStr = com.careermatch.backend.common.converter.PgVectorConverter.toVectorString(embeddingVector);
+
+        log.info("[RAG_PIPELINE][STAGE 7-9] Executing PostgreSQL Hybrid Search (pgvector + BM25 tsvector + RRF k=60) for student {} | keywords: '{}'",
+                student.getId(), keywords);
+
+        List<Job> results = jobRepository.searchHybrid(vectorStr, keywords, limit);
+        log.info("[RAG_PIPELINE][STAGE 9] Hybrid RRF search returned {} candidate jobs in {} ms",
+                results.size(), System.currentTimeMillis() - tStart);
+
+        return results;
     }
+
 
     private String buildProfileText(Student student) {
         StringBuilder sb = new StringBuilder();
