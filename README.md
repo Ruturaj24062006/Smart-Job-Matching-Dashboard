@@ -32,9 +32,9 @@ An enterprise-grade, AI-driven recruitment platform designed to seamlessly conne
 You can log in directly using the pre-seeded recruiter/company accounts or register a new student account:
 
 ### 🏢 Recruiter Account (Nexora Technologies / Demo Recruiter)
-- **Email**: `hr@nexoratech.example` or `demo.recruiter@careermatch.com`
-- **Password**: `NexoraRecruiterPass123!` or `RecruiterPass123!`
-- **Role**: `ROLE_RECRUITER`
+**Email**: [EMAIL_ADDRESS]
+**Password**: `NexoraRecruiterPass123!`
+**Role**: `ROLE_RECRUITER`
 
 ### 🎓 Student Account Registration
 - Navigate to `/register` to create a fresh student account.
