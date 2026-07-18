@@ -1,10 +1,11 @@
-FROM maven:3.9.6-eclipse-temurin-21-jammy AS build
+FROM maven:3.9.6-eclipse-temurin-17-jammy AS build
 WORKDIR /app
 COPY pom.xml .
 COPY src ./src
-RUN mvn clean package -DskipTests
+ENV MAVEN_OPTS="-Xmx400m -XX:+UseContainerSupport"
+RUN mvn clean package -DskipTests -Dmaven.test.skip=true
 
-FROM eclipse-temurin:21-jre-jammy
+FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 COPY --from=build /app/target/career-match-backend-0.0.1-SNAPSHOT.jar app.jar
 
