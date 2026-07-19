@@ -181,12 +181,8 @@ export class FindJobs implements OnInit, OnDestroy {
 
   triggerMatchGeneration(): void {
     this.matchesService.generateMatches().subscribe({
-      next: (mRes) => {
-        if (mRes.success && Array.isArray(mRes.data)) {
-          this.matches.set(mRes.data);
-        } else {
-          this.matches.set([]);
-        }
+      next: () => {
+        this.fetchMatches();
       },
       error: () => {
         this.matches.set([]);
@@ -697,10 +693,12 @@ export class FindJobs implements OnInit, OnDestroy {
     ].filter(Boolean).join('; ');
 
     const currentProf = this.profile();
+    const extractedSkills = this.extractedData()?.skills;
     if (currentProf) {
       const updated: any = {
         ...currentProf,
-        careerPreferences: prefs
+        careerPreferences: prefs,
+        skills: (extractedSkills && extractedSkills.length > 0) ? extractedSkills : currentProf.skills
       };
       this.profileService.updateProfile(updated).subscribe({
         next: () => this.triggerMatchingAndFetch(),

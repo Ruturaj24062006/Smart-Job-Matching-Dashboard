@@ -823,7 +823,6 @@ export class StudentDashboard implements OnInit, OnDestroy {
   }
 
   confirmModalAndSearchJobs(): void {
-    // Save updated preferences from modal to profile
     const prefs = [
       this.reviewRole ? `Role: ${this.reviewRole}` : '',
       this.reviewCity ? `City: ${this.reviewCity}` : '',
@@ -831,10 +830,12 @@ export class StudentDashboard implements OnInit, OnDestroy {
     ].filter(Boolean).join('; ');
 
     const currentProf = this.profile();
+    const extractedSkills = this.extractedData()?.skills;
     if (currentProf) {
       const updated: any = {
         ...currentProf,
-        careerPreferences: prefs
+        careerPreferences: prefs,
+        skills: (extractedSkills && extractedSkills.length > 0) ? extractedSkills : currentProf.skills
       };
       this.profileService.updateProfile(updated).subscribe({
         next: () => this.triggerMatchingAndNavigate(),
@@ -847,8 +848,14 @@ export class StudentDashboard implements OnInit, OnDestroy {
 
   private triggerMatchingAndNavigate(): void {
     this.matchesService.generateMatches().subscribe({
-      next: () => this.onConfirmSuccess(),
-      error: () => this.onConfirmSuccess()
+      next: () => {
+        this.loadDashboardData();
+        this.onConfirmSuccess();
+      },
+      error: () => {
+        this.loadDashboardData();
+        this.onConfirmSuccess();
+      }
     });
   }
 
