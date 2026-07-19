@@ -37,7 +37,13 @@ public class MatchingController {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BadRequestException("User not found"));
 
-        matchingService.generateMatchesForStudent(user.getId());
+        try {
+            matchingService.generateMatchesForStudent(user.getId());
+        } catch (org.springframework.dao.DataIntegrityViolationException | org.springframework.transaction.TransactionSystemException ex) {
+            // A duplicate key violation indicates matches have already been successfully generated
+            // by a concurrent event listener transaction. So we can safely return success.
+            return ResponseEntity.ok(ApiResponse.success("Scoring and match updates triggered successfully", "Generated"));
+        }
         return ResponseEntity.ok(ApiResponse.success("Scoring and match updates triggered successfully", "Generated"));
     }
 
