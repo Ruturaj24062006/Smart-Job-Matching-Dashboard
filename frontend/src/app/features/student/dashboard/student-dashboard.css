@@ -2498,8 +2498,46 @@
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}/* Mobile responsiveness media queries for modals */
+@media (max-width: 768px) {
+  .modal-overlay {
+    align-items: flex-start !important;
+    overflow-y: auto !important;
+    padding: 1rem 0.5rem !important;
+  }
+
+  .modal-container {
+    width: 100% !important;
+    max-width: 95vw !important;
+    padding: 1.5rem 1rem !important;
+    margin: 1rem auto !important;
+    border-radius: 12px !important;
+  }
+
+  .modal-container.split-layout {
+    width: 98vw !important;
+    max-width: 98vw !important;
+  }
+
+  .modal-split-content-wrapper {
+    grid-template-columns: 1fr !important;
+    gap: 1.5rem !important;
+  }
+
+  .modal-right-chat {
+    border-left: none !important;
+    padding-left: 0 !important;
+    border-top: 1px solid var(--border-light) !important;
+    padding-top: 1.5rem !important;
+    height: 400px !important;
+  }
+  
+  .breakdown-grid-modal {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+
+  .modal-specs-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
 }
-
-
-
-
