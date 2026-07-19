@@ -154,8 +154,8 @@ public class ResumeController {
         } catch (Exception e) {
             log.warn("RabbitMQ unavailable — falling back to local ApplicationEvent for resume {}: {}",
                     saved.getId(), e.getMessage());
+            eventPublisher.publishEvent(event);
         }
-        eventPublisher.publishEvent(event);
 
         ResumeResponse response = ResumeResponse.builder()
                 .id(saved.getId())

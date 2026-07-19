@@ -67,9 +67,21 @@ public class SearchService {
         log.info("[RAG_PIPELINE][STAGE 7-9] Executing PostgreSQL Hybrid Search (pgvector + BM25 tsvector + RRF k=60) for student {} | keywords: '{}'",
                 student.getId(), keywords);
 
-        List<Job> results = jobRepository.searchHybrid(vectorStr, keywords, limit);
-        log.info("[RAG_PIPELINE][STAGE 9] Hybrid RRF search returned {} candidate jobs in {} ms",
-                results.size(), System.currentTimeMillis() - tStart);
+        List<Job> results;
+        try {
+            results = jobRepository.searchHybrid(vectorStr, keywords, limit);
+            log.info("[RAG_PIPELINE][STAGE 9] Hybrid RRF search returned {} candidate jobs in {} ms",
+                    results.size(), System.currentTimeMillis() - tStart);
+        } catch (Exception e) {
+            log.warn("[RAG_PIPELINE][STAGE 9] Hybrid RRF search failed ({} ms): {}. Falling back to active jobs list.",
+                    System.currentTimeMillis() - tStart, e.getMessage());
+            results = jobRepository.findByStatus(JobStatus.ACTIVE);
+        }
+
+        if (results.isEmpty()) {
+            log.info("[RAG_PIPELINE][STAGE 9] Hybrid search yielded 0 results. Fallback to all active jobs.");
+            results = jobRepository.findByStatus(JobStatus.ACTIVE);
+        }
 
         return results;
     }
