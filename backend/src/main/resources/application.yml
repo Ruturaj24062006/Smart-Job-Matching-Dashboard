@@ -6,16 +6,17 @@ spring:
     name: career-match-backend
 
   datasource:
-    url: jdbc:postgresql://aws-1-ap-south-1.pooler.supabase.com:5432/postgres
-    username: postgres.qacuyhktzqhfqtswsrgs
-    password: "atharvbhavsar%27s%20Project"
+    url: ${DB_URL:jdbc:postgresql://aws-1-ap-south-1.pooler.supabase.com:5432/postgres?sslmode=require}
+    username: ${DB_USER:postgres.qacuyhktzqhfqtswsrgs}
+    password: ${DB_PASSWORD:atharvbhavsar's Project}
     driver-class-name: org.postgresql.Driver
     hikari:
-      maximum-pool-size: 3
-      minimum-idle: 1
+      maximum-pool-size: 5
+      minimum-idle: 2
       idle-timeout: 30000
       max-lifetime: 1800000
-      connection-timeout: 20000
+      connection-timeout: 30000
+      keepalive-time: 30000
   
   
   jpa:

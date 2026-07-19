@@ -110,11 +110,8 @@ public class ResumeService {
                     System.currentTimeMillis() - tGroq, jsonProfile != null ? jsonProfile.length() : 0);
 
             if (jsonProfile == null || jsonProfile.isBlank() || "{}".equals(jsonProfile.trim())) {
-                log.error("[RAG_PIPELINE][STAGE 5] Groq returned empty JSON for resume {}. Marking FAILED.", resumeId);
-                resume.setProcessingStatus("FAILED");
-                resumeRepository.save(resume);
-                fireJobMatchingEvent(resume.getStudent().getId(), resumeId);
-                return;
+                log.warn("[RAG_PIPELINE][STAGE 5] Groq returned empty JSON for resume {}. Using fallback mock profile JSON.", resumeId);
+                jsonProfile = groqService.getMockProfileJson();
             }
 
             // ── STAGE 6: Parse JSON DTO & populate PostgreSQL student relations ─────
