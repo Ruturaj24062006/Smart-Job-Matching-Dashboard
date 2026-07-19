@@ -73,8 +73,10 @@ public class MatchingService {
                 matches.size(), studentId,
                 matches.isEmpty() ? "n/a" : matches.get(0).getCompositeScore());
 
-        // Step 4: Refresh Redis cache
-        refreshCache(studentId, matches);
+        // NOTE: Redis caching of Match JPA entities is intentionally disabled
+        // because Match.student and Match.job use FetchType.LAZY, causing
+        // Jackson serialization failures (LazyInitializationException -> 500).
+        // Matches are always served fresh from PostgreSQL.
 
         return matches;
     }
@@ -130,32 +132,17 @@ public class MatchingService {
 
     /**
      * Returns the student's job matches sorted by composite score descending.
-     * Results are served from Redis cache (TTL: 1 hour) when available.
+     * Always served from PostgreSQL — Redis caching of Match JPA entities is
+     * intentionally disabled to avoid LazyInitializationException serialization crashes.
      */
-    @SuppressWarnings("unchecked")
+    @Transactional
     public List<Match> getMatchesForStudent(UUID studentId) {
-        String cacheKey = CACHE_PREFIX + studentId;
-
-        // Cache read
-        try {
-            Object cached = redisTemplate.opsForValue().get(cacheKey);
-            if (cached instanceof List) {
-                List<?> list = (List<?>) cached;
-                if (!list.isEmpty()) {
-                    log.debug("Cache HIT for student {} matches.", studentId);
-                    return (List<Match>) list;
-                }
-            }
-        } catch (Exception e) {
-            log.warn("Redis cache read failed for student {}: {}. Falling back to DB.", studentId, e.getMessage());
-        }
-
-        log.debug("Cache MISS for student {} — querying DB.", studentId);
+        log.debug("Loading matches for student {} from DB.", studentId);
         List<Match> matches = matchRepository
                 .findByStudentIdOrderByCompositeScoreDesc(studentId)
                 .stream()
-                .filter(m -> m.getJob().getStatus() == JobStatus.ACTIVE)
-                .filter(m -> m.getCompositeScore() >= 30.0)
+                .filter(m -> m.getJob() != null && m.getJob().getStatus() == JobStatus.ACTIVE)
+                .filter(m -> m.getCompositeScore() != null && m.getCompositeScore() >= 30.0)
                 .collect(Collectors.toList());
 
         // On DB miss, if student has entered skills in profile (even without resume), auto-generate matches
@@ -163,17 +150,12 @@ public class MatchingService {
             log.info("No DB matches found for student {} — generating matches directly from student profile skills.", studentId);
             try {
                 matches = generateMatchesForStudent(studentId).stream()
-                        .filter(m -> m.getJob().getStatus() == JobStatus.ACTIVE)
-                        .filter(m -> m.getCompositeScore() >= 30.0)
+                        .filter(m -> m.getJob() != null && m.getJob().getStatus() == JobStatus.ACTIVE)
+                        .filter(m -> m.getCompositeScore() != null && m.getCompositeScore() >= 30.0)
                         .collect(Collectors.toList());
             } catch (Exception e) {
                 log.warn("Failed to auto-generate matches from profile for student {}: {}", studentId, e.getMessage());
             }
-        }
-
-        // Populate cache on miss
-        if (!matches.isEmpty()) {
-            populateCache(cacheKey, matches);
         }
 
         return matches;
@@ -307,20 +289,17 @@ public class MatchingService {
     //  Redis helpers
     // ──────────────────────────────────────────────────────────────────────────
 
+    // ── Redis helpers (kept for future use but not used for Match entities) ──────
+
+    @SuppressWarnings("unused")
     private void refreshCache(UUID studentId, List<Match> matches) {
-        String cacheKey = CACHE_PREFIX + studentId;
-        invalidateCache(studentId);
-        populateCache(cacheKey, matches);
+        // Redis caching of JPA Match entities is disabled — see getMatchesForStudent
+        log.debug("refreshCache called but disabled for Match entities (serialization safety).");
     }
 
+    @SuppressWarnings("unused")
     private void populateCache(String cacheKey, List<Match> matches) {
-        try {
-            redisTemplate.opsForValue().set(cacheKey, matches, CACHE_TTL);
-            log.debug("Redis cache populated for key '{}' with {} matches (TTL {}h).",
-                    cacheKey, matches.size(), CACHE_TTL.toHours());
-        } catch (Exception e) {
-            log.warn("Redis cache write failed for key '{}': {}", cacheKey, e.getMessage());
-        }
+        // Redis caching of JPA Match entities is disabled — see getMatchesForStudent
     }
 
     private void invalidateCache(UUID studentId) {

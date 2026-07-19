@@ -648,6 +648,26 @@ export class FindJobs implements OnInit, OnDestroy {
     }
   }
 
+  addReviewSkill(skillName: string): void {
+    const name = (skillName || '').trim();
+    if (!name) return;
+    const current = this.extractedData() || { skills: [] };
+    const skills = [...(current.skills || [])];
+    // Avoid duplicates
+    if (!skills.some((s: any) => (s.name || s) === name)) {
+      skills.push({ name, proficiencyLevel: 'INTERMEDIATE' });
+    }
+    this.extractedData.set({ ...current, skills });
+  }
+
+  removeReviewSkill(skillToRemove: any): void {
+    const current = this.extractedData() || { skills: [] };
+    const skills = (current.skills || []).filter((s: any) =>
+      (s.name || s) !== (skillToRemove.name || skillToRemove)
+    );
+    this.extractedData.set({ ...current, skills });
+  }
+
   private startEtaCountdown(): void {
     this.stopEtaCountdown();
     this.etaIntervalId = setInterval(() => {

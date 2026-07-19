@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 export interface MatchResponse {
   id: string;
@@ -49,7 +50,7 @@ export interface MatchDetailsResponse {
   providedIn: 'root'
 })
 export class JobMatchesService {
-  private readonly matchesUrl = 'http://localhost:8080/api/v1/matches';
+  private readonly matchesUrl = `${environment.apiUrl}/matches`;
 
   constructor(private readonly http: HttpClient) {}
 

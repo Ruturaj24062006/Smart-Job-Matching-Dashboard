@@ -185,9 +185,13 @@ public class ResumeController {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BadRequestException("Logged-in user not found"));
 
-        Resume resume = resumeRepository.findByStudentIdAndIsCurrentTrue(user.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("No current resume found for this student"));
+        java.util.Optional<Resume> resumeOpt = resumeRepository.findByStudentIdAndIsCurrentTrue(user.getId());
+        if (resumeOpt.isEmpty()) {
+            // Return 200 with null data — frontend polls this safely; never return 500 for missing resume
+            return ResponseEntity.ok(ApiResponse.success("No current resume found for this student.", null));
+        }
 
+        Resume resume = resumeOpt.get();
         ResumeResponse response = ResumeResponse.builder()
                 .id(resume.getId())
                 .fileUrl(resume.getFileUrl())

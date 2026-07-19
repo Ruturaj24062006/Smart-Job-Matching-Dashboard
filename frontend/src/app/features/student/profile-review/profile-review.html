@@ -43,12 +43,20 @@
       </button>
     </nav>
 
-    <!-- Save Button (pinned) -->
+    <!-- Save / Edit Controls (pinned) -->
     <div class="sidebar-save-area">
-      <button class="btn-save-profile" (click)="saveProfile()" [disabled]="isSaving()">
-        <span *ngIf="!isSaving()">💾 Save Profile</span>
-        <span *ngIf="isSaving()">Saving...</span>
+      <button *ngIf="!isEditMode()" class="btn-save-profile" style="background: linear-gradient(135deg, #2563eb, #1d4ed8);" (click)="toggleEditMode()">
+        <span>✏️ Edit Profile</span>
       </button>
+      <div *ngIf="isEditMode()" style="display: flex; flex-direction: column; gap: 0.5rem; width: 100%;">
+        <button class="btn-save-profile" (click)="saveProfile()" [disabled]="isSaving()">
+          <span *ngIf="!isSaving()">💾 Save Changes</span>
+          <span *ngIf="isSaving()">Saving...</span>
+        </button>
+        <button type="button" class="btn-save-profile" style="background: #ef4444;" (click)="cancelEdit()">
+          <span>✖ Cancel</span>
+        </button>
+      </div>
     </div>
   </aside>
 
@@ -74,22 +82,28 @@
       <!-- SECTION: Personal Information -->
       <!-- ═══════════════════════════════════════════════════════════════ -->
       <section class="profile-section" *ngIf="activeSection() === 'personal'">
-        <div class="section-header">
-          <div class="section-header-icon">👤</div>
-          <div>
-            <h2 class="section-title">Personal Information</h2>
-            <p class="section-subtitle">Your basic profile details visible to recruiters</p>
+        <div class="section-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; gap: 0.75rem; align-items: center;">
+            <div class="section-header-icon">👤</div>
+            <div>
+              <h2 class="section-title">Personal Information</h2>
+              <p class="section-subtitle">Your basic profile details visible to recruiters</p>
+            </div>
           </div>
+          <button type="button" class="btn" (click)="toggleEditMode()" style="padding: 0.5rem 1.1rem; border-radius: 8px; font-weight: 700; cursor: pointer; border: 1.5px solid #2563eb; color: #1d4ed8; background: #eff6ff;">
+            <span *ngIf="!isEditMode()">✏️ Edit Profile</span>
+            <span *ngIf="isEditMode()">🔒 View Mode (Lock)</span>
+          </button>
         </div>
 
         <div class="form-grid">
           <div class="form-group">
             <label class="form-label">First Name *</label>
-            <input class="form-input" type="text" [(ngModel)]="firstName" placeholder="e.g. Arjun">
+            <input class="form-input" type="text" [(ngModel)]="firstName" placeholder="e.g. Arjun" [disabled]="!isEditMode()">
           </div>
           <div class="form-group">
             <label class="form-label">Last Name</label>
-            <input class="form-input" type="text" [(ngModel)]="lastName" placeholder="e.g. Sharma">
+            <input class="form-input" type="text" [(ngModel)]="lastName" placeholder="e.g. Sharma" [disabled]="!isEditMode()">
           </div>
           <div class="form-group">
             <label class="form-label">Email <span class="readonly-badge">Read-only</span></label>
@@ -97,30 +111,30 @@
           </div>
           <div class="form-group">
             <label class="form-label">Phone Number</label>
-            <input class="form-input" type="tel" [(ngModel)]="phone" placeholder="+91 9876543210">
+            <input class="form-input" type="tel" [(ngModel)]="phone" placeholder="+91 9876543210" [disabled]="!isEditMode()">
           </div>
           <div class="form-group">
             <label class="form-label">Date of Birth</label>
-            <input class="form-input" type="date" [(ngModel)]="dateOfBirth">
+            <input class="form-input" type="date" [(ngModel)]="dateOfBirth" [disabled]="!isEditMode()">
           </div>
           <div class="form-group">
             <label class="form-label">Gender</label>
-            <select class="form-select" [(ngModel)]="gender">
+            <select class="form-select" [(ngModel)]="gender" [disabled]="!isEditMode()">
               <option value="">Select gender</option>
               <option *ngFor="let g of genderOptions" [value]="g">{{ g }}</option>
             </select>
           </div>
           <div class="form-group">
             <label class="form-label">City</label>
-            <input class="form-input" type="text" [(ngModel)]="city" placeholder="e.g. Bangalore">
+            <input class="form-input" type="text" [(ngModel)]="city" placeholder="e.g. Bangalore" [disabled]="!isEditMode()">
           </div>
           <div class="form-group">
             <label class="form-label">State</label>
-            <input class="form-input" type="text" [(ngModel)]="state" placeholder="e.g. Karnataka">
+            <input class="form-input" type="text" [(ngModel)]="state" placeholder="e.g. Karnataka" [disabled]="!isEditMode()">
           </div>
           <div class="form-group">
             <label class="form-label">Country</label>
-            <input class="form-input" type="text" [(ngModel)]="country" placeholder="e.g. India">
+            <input class="form-input" type="text" [(ngModel)]="country" placeholder="e.g. India" [disabled]="!isEditMode()">
           </div>
         </div>
 

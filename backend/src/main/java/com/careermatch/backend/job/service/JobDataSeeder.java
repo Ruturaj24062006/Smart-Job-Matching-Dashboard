@@ -39,10 +39,16 @@ public class JobDataSeeder {
     @EventListener(ApplicationReadyEvent.class)
     @Transactional
     public void seedJobsOnStartup() {
+        log.info("JobDataSeeder: Automatic fake job seeding is disabled. Only real database jobs posted by recruiters will be used.");
         try {
-            doSeedJobsOnStartup();
+            // Delete any legacy seeded Nexora jobs from local DB so only real recruiter jobs remain
+            companyRepository.findByNameIgnoreCase("Nexora Technologies Pvt. Ltd.").ifPresent(c -> {
+                jobRepository.deleteByCompanyId(c.getId());
+                companyRepository.delete(c);
+                log.info("JobDataSeeder: Legacy seeded Nexora company and jobs removed from database.");
+            });
         } catch (Exception e) {
-            log.warn("JobDataSeeder: Seeding skipped due to error (will not crash startup): {}", e.getMessage());
+            log.debug("Cleanup of legacy seed jobs skipped: {}", e.getMessage());
         }
     }
 

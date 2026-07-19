@@ -17,6 +17,7 @@ export class ProfileReview implements OnInit {
   // ── Loading / status ──────────────────────────────────────────────────────
   isLoading = signal<boolean>(true);
   isSaving  = signal<boolean>(false);
+  isEditMode = signal<boolean>(false);
   errorMessage   = signal<string | null>(null);
   successMessage = signal<string | null>(null);
 
@@ -254,6 +255,16 @@ export class ProfileReview implements OnInit {
     });
   }
 
+  // ── Edit Mode Controls ───────────────────────────────────────────────────
+  toggleEditMode(): void {
+    this.isEditMode.update(v => !v);
+  }
+
+  cancelEdit(): void {
+    this.loadProfile();
+    this.isEditMode.set(false);
+  }
+
   // ── Save ──────────────────────────────────────────────────────────────────
 
   saveProfile(): void {
@@ -290,12 +301,26 @@ export class ProfileReview implements OnInit {
     this.profileService.updateProfile(payload).subscribe({
       next: () => {
         this.isSaving.set(false);
+        this.isEditMode.set(false);
         this.successMessage.set('Profile saved successfully!');
-        setTimeout(() => this.successMessage.set(null), 3500);
+
+        // Smooth scroll back to top of page so user sees notification
+        if (typeof window !== 'undefined') {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        const mainEl = document.querySelector('.profile-main');
+        if (mainEl) {
+          mainEl.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        setTimeout(() => this.successMessage.set(null), 4000);
       },
       error: (err) => {
         this.isSaving.set(false);
         this.errorMessage.set(err.error?.message || 'Failed to save profile. Please try again.');
+        if (typeof window !== 'undefined') {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
       }
     });
   }

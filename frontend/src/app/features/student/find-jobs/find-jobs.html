@@ -649,14 +649,25 @@
         </div>
       </div>
 
-      <!-- Extracted Skills Chips — only shown when real skills are available -->
-      <div class="extracted-skills-preview" *ngIf="extractedData()?.skills?.length > 0">
-        <label class="review-label">Extracted Key Skills:</label>
-        <div class="skills-badges-wrap">
-          <span *ngFor="let s of (extractedData()?.skills || [])" class="extracted-skill-badge">
+      <!-- Editable Skills Section — user can remove/add skills before searching -->
+      <div class="extracted-skills-preview">
+        <label class="review-label">Skills (editable):</label>
+        <div class="skills-badges-wrap" style="flex-wrap: wrap; gap: 0.4rem;">
+          <span *ngFor="let s of (extractedData()?.skills || [])" class="extracted-skill-badge" style="display: inline-flex; align-items: center; gap: 0.3rem;">
             ✓ {{ s.name || s }}
+            <button type="button"
+              style="background: none; border: none; cursor: pointer; color: #ef4444; font-size: 0.85rem; padding: 0 2px; line-height: 1;"
+              (click)="removeReviewSkill(s)">✕</button>
           </span>
         </div>
+        <!-- Add new skill input -->
+        <div style="display: flex; gap: 0.5rem; margin-top: 0.6rem;">
+          <input type="text" #newSkillInput class="form-control review-input"
+            placeholder="Add a skill..." style="flex: 1; padding: 0.4rem 0.6rem; font-size: 0.85rem;"
+            (keydown.enter)="addReviewSkill(newSkillInput.value); newSkillInput.value = ''">
+          <button type="button" class="btn btn-secondary" style="padding: 0.35rem 0.7rem; font-size: 0.82rem;"
+            (click)="addReviewSkill(newSkillInput.value); newSkillInput.value = ''">+ Add</button>
+          </div>
       </div>
 
       <div class="popup-actions-row">

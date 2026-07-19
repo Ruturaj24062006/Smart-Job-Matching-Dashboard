@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 export interface SkillDto {
   name: string;
@@ -67,8 +68,8 @@ export interface StudentProfileDto {
   providedIn: 'root'
 })
 export class StudentProfileService {
-  private readonly studentsUrl = 'http://localhost:8080/api/v1/students';
-  private readonly resumeUrl = 'http://localhost:8080/api/v1/resume';
+  private readonly studentsUrl = `${environment.apiUrl}/students`;
+  private readonly resumeUrl = `${environment.apiUrl}/resume`;
 
   constructor(private readonly http: HttpClient) {}
 
