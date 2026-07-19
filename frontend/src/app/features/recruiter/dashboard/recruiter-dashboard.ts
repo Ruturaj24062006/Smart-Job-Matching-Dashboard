@@ -49,7 +49,7 @@ export class RecruiterDashboard implements OnInit, OnDestroy {
   expandedMenus = signal<Record<string, boolean>>({
     jobs: true,
     matching: true,
-    applications: true
+    applications: false
   });
 
   // Jobs Workspace

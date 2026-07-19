@@ -9,9 +9,8 @@
 /* Sticky Sidebar styling */
 .recruiter-sidebar {
   width: 280px;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(16px);
-  border-right: 1px solid rgba(118, 38, 22, 0.08);
+  background: #ffffff;
+  border-right: 1px solid #e2e8f0;
   padding: 2.2rem 1.25rem;
   display: flex;
   flex-direction: column;
@@ -20,7 +19,7 @@
   height: 100vh;
   overflow-y: auto;
   z-index: 100;
-  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.02);
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.01);
 }
 
 .sidebar-header {
@@ -44,17 +43,17 @@
   align-items: center;
   gap: 0.88rem;
   padding: 0.88rem;
-  background: rgba(118, 38, 22, 0.04);
+  background: #f8fafc;
   border-radius: 12px;
-  border: 1px solid rgba(118, 38, 22, 0.06);
+  border: 1px solid #e2e8f0;
 }
 
 .profile-avatar {
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  background: var(--primary-color);
-  color: var(--text-light);
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -72,7 +71,7 @@
 .profile-name {
   font-size: 0.88rem;
   font-weight: 700;
-  color: var(--text-dark);
+  color: #1e293b;
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
@@ -80,7 +79,7 @@
 
 .profile-role {
   font-size: 0.72rem;
-  color: var(--text-muted);
+  color: #64748b;
   font-weight: 500;
 }
 
@@ -98,30 +97,36 @@
   gap: 0.88rem;
   padding: 0.85rem 1rem;
   border-radius: 10px;
-  color: var(--text-dark);
+  color: #475569;
   font-size: 0.92rem;
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   border: 1px solid transparent;
+  border-left: 4px solid transparent;
 }
 
 .nav-icon {
   width: 18px;
   height: 18px;
   opacity: 0.75;
+  color: currentColor;
 }
 
 .nav-item:hover {
-  background: rgba(118, 38, 22, 0.05);
+  background: #f1f5f9;
   color: var(--primary-color);
 }
 
 .nav-item.active {
-  background: var(--primary-color);
-  color: var(--text-light);
-  box-shadow: 0 4px 15px rgba(118, 38, 22, 0.2);
+  background: rgba(118, 38, 22, 0.05);
+  color: var(--primary-color);
+  border-left-color: var(--primary-color);
+  border-radius: 0 10px 10px 0;
+  font-weight: 700;
+  box-shadow: none;
+  padding-left: 0.75rem;
 }
 
 .nav-item.active .nav-icon {
@@ -132,7 +137,7 @@
 .nav-group-title {
   font-size: 0.72rem;
   font-weight: 800;
-  color: var(--text-light);
+  color: #94a3b8;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   padding: 1.25rem 1rem 0.5rem 1rem;
@@ -3269,4 +3274,93 @@ div.score-low { background-color: #c5221f; }
   .cp-card {
     padding: 1.25rem 1.25rem;
   }
+}
+
+/* Premium dynamic skill pill styling */
+.premium-skill-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(var(--primary-rgb), 0.04);
+  color: var(--primary-color);
+  border: 1px solid rgba(var(--primary-rgb), 0.16);
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  user-select: none;
+}
+
+.premium-skill-pill:hover {
+  background: rgba(var(--primary-rgb), 0.08);
+  border-color: rgba(var(--primary-rgb), 0.35);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.premium-skill-pill .remove-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 800;
+  transition: all 0.15s ease;
+}
+
+.premium-skill-pill .remove-pill-btn:hover {
+  background: #ea4335;
+  color: white;
+  transform: scale(1.1);
+}
+
+/* Premium Table Layout Enhancements */
+.dashboard-data-table, .job-workspace-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+}
+
+.dashboard-data-table th, .job-workspace-table th {
+  padding: 1.1rem 1.25rem;
+  background: rgba(var(--primary-rgb), 0.02) !important;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.06);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.dashboard-data-table tr, .job-workspace-table tr {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dashboard-data-table tr:hover, .job-workspace-table tr:hover {
+  background: rgba(var(--primary-rgb), 0.015) !important;
+}
+
+.dashboard-data-table td, .job-workspace-table td {
+  padding: 1.1rem 1.25rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  font-size: 0.88rem;
+  vertical-align: middle;
+  color: var(--text-primary);
+}
+
+/* Rounded corners for table container */
+.table-responsive-wrapper, .table-container {
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.01);
+  overflow: hidden;
+  background: white;
 }

@@ -543,9 +543,9 @@
             <div class="form-group">
               <label class="form-label" style="font-weight: 700; margin-bottom: 0.35rem; display: block;">Required Skills *</label>
               <div class="skills-wrap" *ngIf="requiredSkillsArray.length > 0" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;">
-                <span *ngFor="let sk of requiredSkillsArray; let i = index" class="skill-pills matched" style="display: inline-flex; align-items: center; background: rgba(var(--primary-rgb), 0.1); color: var(--primary-color); padding: 0.25rem 0.65rem; border-radius: 20px; font-weight: 700; font-size: 0.8rem;">
+                <span *ngFor="let sk of requiredSkillsArray; let i = index" class="premium-skill-pill">
                   {{ sk }}
-                  <span class="remove-pill" (click)="removeRequiredSkill(i)" style="margin-left: 0.4rem; cursor: pointer; opacity: 0.7;">&times;</span>
+                  <span class="remove-pill-btn" (click)="removeRequiredSkill(i)">&times;</span>
                 </span>
               </div>
               <div class="add-skill-row" style="display: flex; gap: 0.5rem;">
