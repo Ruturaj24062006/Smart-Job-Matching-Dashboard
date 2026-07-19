@@ -27,7 +27,7 @@ export class AuthService {
   // Signals for state management
   readonly currentUser = signal<UserSession | null>(null);
   readonly isAuthenticated = computed(() => this.currentUser() !== null);
-  /** True while session is being restored from localStorage on startup. Guards must wait for this to become false. */
+  /** True while session is being restored from sessionStorage on startup. Guards must wait for this to become false. */
   readonly isAuthLoading = signal<boolean>(true);
 
   constructor(private readonly http: HttpClient) {
@@ -59,7 +59,7 @@ export class AuthService {
   }
 
   refreshToken(): Observable<any> {
-    const refreshToken = localStorage.getItem('refresh_token');
+    const refreshToken = sessionStorage.getItem('refresh_token');
     return this.http.post<any>(`${this.apiUrl}/refresh`, { refreshToken }).pipe(
       tap(res => {
         if (res.success && res.data) {
@@ -84,14 +84,14 @@ export class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user_session');
+    sessionStorage.removeItem('access_token');
+    sessionStorage.removeItem('refresh_token');
+    sessionStorage.removeItem('user_session');
     this.currentUser.set(null);
   }
 
   getAccessToken(): string | null {
-    return localStorage.getItem('access_token');
+    return sessionStorage.getItem('access_token');
   }
 
   /** Returns the current user's role normalized to uppercase (e.g. ROLE_STUDENT). */
@@ -127,12 +127,12 @@ export class AuthService {
   // ─── Private Helpers ────────────────────────────────────────────────────────
 
   saveSession(data: LoginResponse): void {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user_session');
+    sessionStorage.removeItem('access_token');
+    sessionStorage.removeItem('refresh_token');
+    sessionStorage.removeItem('user_session');
 
-    localStorage.setItem('access_token', data.accessToken);
-    localStorage.setItem('refresh_token', data.refreshToken);
+    sessionStorage.setItem('access_token', data.accessToken);
+    sessionStorage.setItem('refresh_token', data.refreshToken);
 
     // Derive email: prefer response field, then fall back to JWT sub claim
     const email = data.email ?? extractEmailFromJwt(data.accessToken) ?? '';
@@ -143,15 +143,15 @@ export class AuthService {
       role: normalizeRole(data.role)
     };
 
-    localStorage.setItem('user_session', JSON.stringify(session));
+    sessionStorage.setItem('user_session', JSON.stringify(session));
     this.currentUser.set(session);
   }
 
   private restoreSession(): void {
     this.isAuthLoading.set(true);
     try {
-      const sessionStr = localStorage.getItem('user_session');
-      const token = localStorage.getItem('access_token');
+      const sessionStr = sessionStorage.getItem('user_session');
+      const token = sessionStorage.getItem('access_token');
 
       if (sessionStr && token) {
         // Validate token expiry BEFORE restoring the session.
@@ -163,7 +163,7 @@ export class AuthService {
           return;
         }
         const raw: UserSession = JSON.parse(sessionStr);
-        // Always normalize the stored role in case localStorage has stale casing
+        // Always normalize the stored role in case sessionStorage has stale casing
         const session: UserSession = { ...raw, role: normalizeRole(raw.role) };
         this.currentUser.set(session);
       }
