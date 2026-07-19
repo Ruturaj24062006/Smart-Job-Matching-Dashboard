@@ -74,7 +74,12 @@ export class FindJobs implements OnInit, OnDestroy {
 
   // Reactively computed list of filtered and sorted matches
   processedMatches = computed(() => {
-    let list = [...this.matches()];
+    const skills = this.profile()?.skills || [];
+    if (skills.length === 0) {
+      return [];
+    }
+
+    let list = [...this.matches()].filter(m => m.compositeScore > 0);
 
     // Search text filters
     const roleText = this.searchRole().toLowerCase().trim();

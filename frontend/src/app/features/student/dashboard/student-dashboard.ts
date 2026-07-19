@@ -259,7 +259,15 @@ export class StudentDashboard implements OnInit, OnDestroy {
   }
 
   processMatches(matchList: MatchResponse[]): void {
-    const list = (matchList && Array.isArray(matchList)) ? matchList : [];
+    const skills = this.profile()?.skills || [];
+    let list = (matchList && Array.isArray(matchList)) ? matchList : [];
+    
+    if (skills.length === 0) {
+      list = [];
+    } else {
+      list = list.filter(m => m.compositeScore > 0);
+    }
+    
     this.matches.set(list);
     
     // Compute average match score
@@ -472,7 +480,12 @@ export class StudentDashboard implements OnInit, OnDestroy {
       next: (res) => {
         this.isSearchLoading.set(false);
         if (res.success && Array.isArray(res.data)) {
-          this.searchResults.set(res.data);
+          const skills = this.profile()?.skills || [];
+          if (skills.length === 0) {
+            this.searchResults.set([]);
+          } else {
+            this.searchResults.set(res.data.filter((m: any) => m.compositeScore > 0));
+          }
         } else {
           this.searchResults.set([]);
         }
