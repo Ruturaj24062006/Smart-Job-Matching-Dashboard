@@ -9,5 +9,5 @@ WORKDIR /app
 COPY --from=build /app/target/career-match-backend-0.0.1-SNAPSHOT.jar app.jar
 
 EXPOSE 8080
-ENV JAVA_OPTS="-Xmx256m -Xms64m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC -XX:+UseContainerSupport -XX:+ExitOnOutOfMemoryError"
+ENV JAVA_OPTS="-Xmx256m -Xms64m -XX:+UseSerialGC -XX:+UseContainerSupport"
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -Dserver.port=${PORT:-8080} -jar app.jar"]
