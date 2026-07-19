@@ -193,6 +193,10 @@ public class ScoringService {
             return 0.0;
         }
 
+        if (job == null) {
+            return 2.5; // Baseline credit for having certifications
+        }
+
         String jobText = (job.getTitle() + " " + job.getRequirements() + " " + job.getDescription()).toLowerCase();
         long matches = 0;
 

@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @PreAuthorize("hasAuthority('ROLE_ADMIN')")
 @Tag(name = "Admin System", description = "System administrator control board")
+@Transactional
 public class AdminController {
 
     private final UserRepository userRepository;

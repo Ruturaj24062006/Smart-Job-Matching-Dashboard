@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,6 +25,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/v1/jobs")
 @RequiredArgsConstructor
 @Tag(name = "Job Management", description = "Endpoints for posting, editing, listing, and closing job offers")
+@Transactional
 public class JobController {
 
     private final JobService jobService;

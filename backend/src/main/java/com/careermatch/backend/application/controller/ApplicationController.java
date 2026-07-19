@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,6 +31,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/v1/applications")
 @RequiredArgsConstructor
 @Tag(name = "Application Workflow", description = "Endpoints for applying to jobs, tracking application statuses, and recruiter reviews")
+@Transactional
 public class ApplicationController {
 
     private final ApplicationService applicationService;

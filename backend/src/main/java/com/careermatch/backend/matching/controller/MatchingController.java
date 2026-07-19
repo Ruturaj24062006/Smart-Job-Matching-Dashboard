@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,6 +25,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/v1/matches")
 @RequiredArgsConstructor
 @Tag(name = "Job Matching Engine", description = "Endpoints for retrieving AI matches, scoring, and job eligibility explanations")
+@Transactional
 public class MatchingController {
 
     private final MatchingService matchingService;
