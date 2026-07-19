@@ -121,16 +121,7 @@ public class MatchingService {
                     .eligibilityStatus(eligible)
                     .build();
         }
-        Match saved;
-        try {
-            saved = matchRepository.saveAndFlush(match);
-        } catch (org.springframework.dao.DataIntegrityViolationException e) {
-            Match existing = matchRepository.findByStudentIdAndJobId(student.getId(), job.getId()).orElse(match);
-            existing.setScore(score);
-            existing.setCompositeScore(score);
-            existing.setEligibilityStatus(eligible);
-            saved = matchRepository.save(existing);
-        }
+        Match saved = matchRepository.save(match);
         invalidateCache(student.getId());
         return saved;
     }
