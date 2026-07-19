@@ -1,13 +1,10 @@
-FROM eclipse-temurin:21-jdk-jammy AS build
+FROM maven:3.9.6-eclipse-temurin-17 AS build
 WORKDIR /app
-COPY .mvn .mvn
-COPY mvnw mvnw
 COPY pom.xml pom.xml
 COPY src src
-# Fix CRLF carriage return line endings in mvnw script for Linux compatibility
-RUN tr -d '\r' < mvnw > mvnw.tmp && mv mvnw.tmp mvnw && chmod +x mvnw && ./mvnw clean package -DskipTests
+RUN mvn clean package -DskipTests
 
-FROM eclipse-temurin:21-jre-jammy
+FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 COPY --from=build /app/target/career-match-backend-0.0.1-SNAPSHOT.jar app.jar
 
