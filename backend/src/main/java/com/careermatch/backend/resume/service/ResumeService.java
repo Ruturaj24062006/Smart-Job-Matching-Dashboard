@@ -20,6 +20,10 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.careermatch.backend.resume.entity.ResumeChunk;
+import com.careermatch.backend.resume.repository.ResumeChunkRepository;
+import java.util.List;
+
 import java.time.LocalDate;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -31,6 +35,7 @@ import java.util.concurrent.Executor;
 public class ResumeService {
 
     private final ResumeRepository resumeRepository;
+    private final ResumeChunkRepository resumeChunkRepository;
     private final StudentRepository studentRepository;
     private final EmbeddingService embeddingService;
     private final GroqService groqService;
@@ -42,16 +47,17 @@ public class ResumeService {
 
     /**
      * Background processing pipeline for an uploaded resume.
-     * The parsedText is already stored on the Resume entity by the controller
-     * (text was extracted in-memory and the file was deleted at upload time).
      * <p>
-     * Pipeline:
-     * 1. Load resume (parsedText already present)
-     * 2. Generate 384-dimension embedding via all-MiniLM-L6-v2
-     * 3. Extract structured JSON profile via Groq llama-3.3-70b-versatile
-     * 4. Persist embedding + extractedJson, mark status = SUCCESS
-     * 5. Deactivate previous resumes for this student
-     * 6. Fire JobMatchingRequestedEvent → triggers hybrid RAG matching pipeline
+     * Complete RAG Pipeline:
+     * 1. Load resume (parsedText present)
+     * 2. Chunk text into 500-char segments with 100-char overlap
+     * 3. Generate 384-dim embeddings for each chunk via all-MiniLM-L6-v2
+     * 4. Persist chunks & vectors in pgvector (resume_chunks table)
+     * 5. Extract structured JSON profile via Groq LLM (llama-3.3-70b-versatile)
+     * 6. Persist structured profile in PostgreSQL student entities
+     * 7. Generate main resume embedding vector
+     * 8. Mark status = SUCCESS & activate
+     * 9. Fire JobMatchingRequestedEvent → triggers hybrid RAG matching & 100-mark scoring engine
      */
     @Transactional
     public void processResume(UUID resumeId) {
@@ -72,64 +78,86 @@ public class ResumeService {
         log.info("[RAG_PIPELINE][STAGE 2] Raw text extracted successfully. Length: {} chars", parsedText.length());
 
         try {
-            // ── STAGE 3: Extract structured JSON profile via Groq ───────────────────
+            // ── STAGE 3: Chunk Text & Generate Embeddings for Chunks (pgvector) ──────
+            long tChunk = System.currentTimeMillis();
+            List<String> textChunks = createTextChunks(parsedText, 500, 100);
+            log.info("[RAG_PIPELINE][STAGE 3] Split parsed text into {} chunks.", textChunks.size());
+
+            try {
+                resumeChunkRepository.deleteByResumeId(resumeId);
+                for (int i = 0; i < textChunks.size(); i++) {
+                    String chunkContent = textChunks.get(i);
+                    float[] chunkVector = embeddingService.generateEmbedding(chunkContent);
+                    ResumeChunk chunkEntity = ResumeChunk.builder()
+                            .resume(resume)
+                            .chunkIndex(i)
+                            .content(chunkContent)
+                            .embedding(chunkVector)
+                            .build();
+                    resumeChunkRepository.save(chunkEntity);
+                }
+                log.info("[RAG_PIPELINE][STAGE 3-4] Saved {} resume chunks with embeddings to pgvector in {} ms.",
+                        textChunks.size(), System.currentTimeMillis() - tChunk);
+            } catch (Exception e) {
+                log.warn("[RAG_PIPELINE][STAGE 3-4] Chunk vector storage failed: {}. Continuing main profile extraction.", e.getMessage());
+            }
+
+            // ── STAGE 5: Extract structured JSON profile via Groq ───────────────────
             long tGroq = System.currentTimeMillis();
-            log.info("[RAG_PIPELINE][STAGE 3] Invoking Groq LLM for structured JSON extraction...");
+            log.info("[RAG_PIPELINE][STAGE 5] Invoking Groq LLM for structured JSON extraction...");
             String jsonProfile = groqService.extractResumeProfile(parsedText);
-            log.info("[RAG_PIPELINE][STAGE 3] Groq extraction completed in {} ms. JSON length: {} chars",
+            log.info("[RAG_PIPELINE][STAGE 5] Groq extraction completed in {} ms. JSON length: {} chars",
                     System.currentTimeMillis() - tGroq, jsonProfile != null ? jsonProfile.length() : 0);
 
             if (jsonProfile == null || jsonProfile.isBlank() || "{}".equals(jsonProfile.trim())) {
-                log.error("[RAG_PIPELINE][STAGE 3] Groq returned empty JSON for resume {}. Marking FAILED.", resumeId);
+                log.error("[RAG_PIPELINE][STAGE 5] Groq returned empty JSON for resume {}. Marking FAILED.", resumeId);
                 resume.setProcessingStatus("FAILED");
                 resumeRepository.save(resume);
                 fireJobMatchingEvent(resume.getStudent().getId(), resumeId);
                 return;
             }
 
-            // ── STAGE 4: Parse JSON DTO & populate PostgreSQL student relations ─────
+            // ── STAGE 6: Parse JSON DTO & populate PostgreSQL student relations ─────
             long tDb = System.currentTimeMillis();
-            log.info("[RAG_PIPELINE][STAGE 4] Deserializing structured JSON and updating PostgreSQL student profile...");
+            log.info("[RAG_PIPELINE][STAGE 6] Deserializing structured JSON and updating PostgreSQL student profile...");
             ExtractedProfile profile = objectMapper.readValue(jsonProfile, ExtractedProfile.class);
             Student student = studentRepository.findById(resume.getStudent().getId())
                     .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + resume.getStudent().getId()));
             updateStudentProfile(student, profile);
 
-            log.info("[RAG_PIPELINE][STAGE 4] PostgreSQL profile updated in {} ms. Skills: {}, Experience: {}, Projects: {}",
+            log.info("[RAG_PIPELINE][STAGE 6] PostgreSQL profile updated in {} ms. Skills: {}, Experience: {}, Projects: {}",
                     System.currentTimeMillis() - tDb,
                     student.getSkills() != null ? student.getSkills().size() : 0,
                     student.getExperience() != null ? student.getExperience().size() : 0,
                     student.getProjects() != null ? student.getProjects().size() : 0);
 
-            // ── STAGE 5: Generate embedding ONLY from structured profile text ────────
+            // ── STAGE 7: Generate overall vector embedding ───────────────────────────
             long tEmbed = System.currentTimeMillis();
             String structuredText = buildStructuredTextFromProfile(profile, student);
-            log.info("[RAG_PIPELINE][STAGE 5] Generating 384-dim vector embedding from structured profile text (length: {} chars)...", structuredText.length());
-            log.debug("[RAG_PIPELINE][STAGE 5] Structured text sample: '{}'",
-                    structuredText.length() > 200 ? structuredText.substring(0, 200) + "..." : structuredText);
+            log.info("[RAG_PIPELINE][STAGE 7] Generating 384-dim vector embedding from structured profile text (length: {} chars)...", structuredText.length());
 
             float[] vector;
             try {
                 vector = embeddingService.generateEmbedding(structuredText);
-                log.info("[RAG_PIPELINE][STAGE 5] Embedding generated successfully in {} ms (dims: {})",
+                log.info("[RAG_PIPELINE][STAGE 7] Main embedding generated successfully in {} ms (dims: {})",
                         System.currentTimeMillis() - tEmbed, vector.length);
             } catch (Exception e) {
-                log.warn("[RAG_PIPELINE][STAGE 5] Embedding generation failed ({} ms): {}. Using fallback zero-vector.",
+                log.warn("[RAG_PIPELINE][STAGE 7] Embedding generation failed ({} ms): {}. Using fallback zero-vector.",
                         System.currentTimeMillis() - tEmbed, e.getMessage());
                 vector = new float[384];
                 for (int i = 0; i < 384; i++) vector[i] = 0.01f;
             }
 
-            // ── STAGE 6: Persist resume entity & activate ───────────────────────────
+            // ── STAGE 8: Persist resume entity & activate ───────────────────────────
             resume.setEmbedding(vector);
             resume.setExtractedJson(jsonProfile);
             resume.setProcessingStatus("SUCCESS");
             saveResumeAndDeactivateOthers(resume);
 
-            log.info("[RAG_PIPELINE][SUMMARY] Resume {} processed successfully in {} ms. Triggering hybrid matching engine...",
+            log.info("[RAG_PIPELINE][SUMMARY] Resume {} processed successfully in {} ms. Triggering RAG matching engine...",
                     resumeId, System.currentTimeMillis() - startProcess);
 
-            // ── STAGE 7-11: Fire async job matching pipeline ────────────────────────
+            // ── STAGE 9: Fire async job matching pipeline ──────────────────────────
             fireJobMatchingEvent(student.getId(), resumeId);
 
         } catch (Exception e) {
@@ -143,6 +171,24 @@ public class ResumeService {
                 log.error("[RAG_PIPELINE][FAILURE] Failed to persist FAILED status for resume {}: {}", resumeId, ex.getMessage());
             }
         }
+    }
+
+    private List<String> createTextChunks(String text, int chunkSize, int overlap) {
+        List<String> chunks = new java.util.ArrayList<>();
+        if (text == null || text.isBlank()) return chunks;
+
+        int length = text.length();
+        int start = 0;
+        while (start < length) {
+            int end = Math.min(start + chunkSize, length);
+            String chunk = text.substring(start, end).trim();
+            if (!chunk.isBlank()) {
+                chunks.add(chunk);
+            }
+            if (end == length) break;
+            start += (chunkSize - overlap);
+        }
+        return chunks;
     }
 
     /**

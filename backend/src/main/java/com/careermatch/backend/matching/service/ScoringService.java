@@ -7,64 +7,165 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Deterministic Scoring Engine implementing the exact 100 Marks Recommended Score Formula:
+ *
+ *  Factor                                  Weight
+ *  ────────────────────────────────────────────────
+ *  Skills Match                            35%
+ *  Semantic Similarity (Embeddings)        25%
+ *  Experience Match                        15%
+ *  Education Match                         10%
+ *  Projects Match                           5%
+ *  Certifications                           5%
+ *  Preferred Location / Work Mode           3%
+ *  Job Preferences (Role, Salary, etc.)     2%
+ *  ────────────────────────────────────────────────
+ *  Total                                  100%
+ */
 @Service
 @Slf4j
 public class ScoringService {
 
     public double calculateCompositeScore(Student student, Job job) {
-        double techFit = calculateTechnicalFit(student, job);            // 40%
-        double projectFit = calculateProjectFit(student, job);          // 20%
-        double expFit = calculateExperienceFit(student, job);            // 15%
-        double domainFit = calculateDomainFit(student, job);            // 10%
-        double behavioralFit = calculateBehavioralFit(student, job);    // 10%
-        double eduCertFit = calculateEduCertFit(student);               // 5%
+        return calculateCompositeScore(student, job, null);
+    }
 
-        double composite = techFit + projectFit + expFit + domainFit + behavioralFit + eduCertFit;
+    public double calculateCompositeScore(Student student, Job job, float[] studentEmbedding) {
+        double skillsScore      = calculateSkillsMatch(student, job);            // 35%
+        double semanticScore    = calculateSemanticSimilarity(studentEmbedding, job.getEmbedding()); // 25%
+        double experienceScore  = calculateExperienceMatch(student, job);         // 15%
+        double educationScore   = calculateEducationMatch(student, job);          // 10%
+        double projectsScore    = calculateProjectsMatch(student, job);           // 5%
+        double certsScore       = calculateCertificationsScore(student, job);     // 5%
+        double locationModeScore= calculateLocationWorkModeMatch(student, job);   // 3%
+        double preferencesScore = calculatePreferencesMatch(student, job);        // 2%
+
+        double composite = skillsScore + semanticScore + experienceScore + educationScore 
+                         + projectsScore + certsScore + locationModeScore + preferencesScore;
 
         // Domain & Skill Mismatch Guard:
-        // If student profile has skills listed, but techFit and domainFit are both 0 (meaning zero overlap in skills and domain),
-        // then cap composite score to 0.0 so irrelevant jobs (e.g. Backend Dev shown to Marketing student) are filtered out.
+        // If student has explicit skills listed, but zero skill overlap AND low semantic match,
+        // cap composite score to 0.0 to eliminate irrelevant matches (e.g. Marketing student getting Backend Dev job)
         boolean hasSkills = student.getSkills() != null && !student.getSkills().isEmpty();
-        if (hasSkills && techFit < 0.1 && domainFit < 0.1) {
-            log.info("Domain mismatch detected between student {} skills and job {}: capping score to 0.", student.getId(), job.getId());
+        if (hasSkills && skillsScore < 1.0 && semanticScore < 5.0) {
+            log.info("Domain mismatch detected between student {} skills and job {}: capping composite score to 0.", student.getId(), job.getId());
             composite = 0.0;
         }
 
-        log.info("Scoring student {} for Job {}: Tech={}, Proj={}, Exp={}, Dom={}, Behav={}, EduCert={}, Total={}",
-                student.getId(), job.getId(), techFit, projectFit, expFit, domainFit, behavioralFit, eduCertFit, composite);
-        
+        log.info("Scoring student {} for Job {}: Skills={}, Semantic={}, Exp={}, Edu={}, Proj={}, Certs={}, LocMode={}, Prefs={}, Total={}",
+                student.getId(), job.getId(), skillsScore, semanticScore, experienceScore, educationScore, 
+                projectsScore, certsScore, locationModeScore, preferencesScore, composite);
+
         return Math.round(composite * 10.0) / 10.0; // round to 1 decimal place
     }
 
-    // Technical Fit (40%) - Skill tags overlap
-    public double calculateTechnicalFit(Student student, Job job) {
+    // 1. Skills Match (35%)
+    public double calculateSkillsMatch(Student student, Job job) {
         if (student.getSkills() == null || student.getSkills().isEmpty()) {
             return 0.0;
         }
 
-        String requirements = (job.getRequirements() != null ? job.getRequirements() : "").toLowerCase();
-        String description = (job.getDescription() != null ? job.getDescription() : "").toLowerCase();
-        String title = (job.getTitle() != null ? job.getTitle() : "").toLowerCase();
-        String jobText = title + " " + requirements + " " + description;
+        String reqSkills  = job.getRequiredSkills() != null ? job.getRequiredSkills().toLowerCase() : "";
+        String prefSkills = job.getPreferredSkills() != null ? job.getPreferredSkills().toLowerCase() : "";
+        String reqs       = job.getRequirements() != null ? job.getRequirements().toLowerCase() : "";
+        String desc       = job.getDescription() != null ? job.getDescription().toLowerCase() : "";
+        String title      = job.getTitle() != null ? job.getTitle().toLowerCase() : "";
+        String fullJobText = title + " " + reqSkills + " " + prefSkills + " " + reqs + " " + desc;
 
         Set<String> studentSkills = student.getSkills().stream()
-                .map(s -> s.getName().toLowerCase().trim())
+                .map(s -> s.getName() != null ? s.getName().toLowerCase().trim() : "")
+                .filter(s -> !s.isBlank())
                 .collect(Collectors.toSet());
 
-        long matchCount = studentSkills.stream()
-                .filter(s -> !s.isBlank() && jobText.contains(s))
+        if (studentSkills.isEmpty()) return 0.0;
+
+        long matchedCount = studentSkills.stream()
+                .filter(fullJobText::contains)
                 .count();
 
-        double ratio = (double) matchCount / Math.max(5.0, studentSkills.size());
-        return Math.min(40.0, ratio * 40.0);
+        double ratio = (double) matchedCount / Math.max(3.0, studentSkills.size());
+        return Math.min(35.0, ratio * 35.0);
     }
 
-    // Project Fit (20%) - Project technologies / descriptions matching job
-    public double calculateProjectFit(Student student, Job job) {
+    // 2. Semantic Similarity (Embeddings) (25%)
+    public double calculateSemanticSimilarity(float[] v1, float[] v2) {
+        if (v1 == null || v2 == null || v1.length == 0 || v2.length == 0 || v1.length != v2.length) {
+            return 12.5; // Default 50% semantic baseline when vectors unavailable
+        }
+
+        double dotProduct = 0.0;
+        double normA = 0.0;
+        double normB = 0.0;
+
+        for (int i = 0; i < v1.length; i++) {
+            dotProduct += v1[i] * v2[i];
+            normA += v1[i] * v1[i];
+            normB += v2[i] * v2[i];
+        }
+
+        if (normA == 0 || normB == 0) return 0.0;
+
+        double similarity = dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+        similarity = Math.max(0.0, Math.min(1.0, similarity)); // Clamp to [0, 1]
+
+        return Math.round(similarity * 25.0 * 10.0) / 10.0;
+    }
+
+    // 3. Experience Match (15%)
+    public double calculateExperienceMatch(Student student, Job job) {
+        double years = calculateYearsOfExperience(student);
+        String expLevel = job.getExperienceLevel() != null ? job.getExperienceLevel().toUpperCase() : "ENTRY_LEVEL";
+
+        if (expLevel.contains("SENIOR") || expLevel.contains("EXECUTIVE")) {
+            if (years >= 5.0) return 15.0;
+            return (years / 5.0) * 15.0;
+        } else if (expLevel.contains("MID") || expLevel.contains("INTERMEDIATE")) {
+            if (years >= 2.0) return 15.0;
+            return (years / 2.0) * 15.0;
+        } else {
+            // Entry level / Internship
+            return 15.0;
+        }
+    }
+
+    // 4. Education Match (10%)
+    public double calculateEducationMatch(Student student, Job job) {
+        if (student.getEducation() == null || student.getEducation().isEmpty()) {
+            return 0.0;
+        }
+
+        double score = 5.0; // Base score for having an education record
+
+        String reqEdu = job.getEducationLevel() != null ? job.getEducationLevel().toLowerCase() : "";
+        String jobText = (job.getTitle() + " " + job.getRequirements() + " " + job.getDescription()).toLowerCase();
+
+        for (StudentEducation edu : student.getEducation()) {
+            String degree = edu.getDegree() != null ? edu.getDegree().toLowerCase() : "";
+            String field = edu.getFieldOfStudy() != null ? edu.getFieldOfStudy().toLowerCase() : "";
+
+            if (!degree.isBlank() && (jobText.contains(degree) || reqEdu.contains(degree))) {
+                score += 2.5;
+            }
+            if (!field.isBlank() && jobText.contains(field)) {
+                score += 2.5;
+            }
+
+            if (job.getGpaCutoff() != null && edu.getGpa() != null) {
+                if (edu.getGpa() >= job.getGpaCutoff()) {
+                    score += 1.0;
+                }
+            }
+        }
+
+        return Math.min(10.0, score);
+    }
+
+    // 5. Projects Match (5%)
+    public double calculateProjectsMatch(Student student, Job job) {
         if (student.getProjects() == null || student.getProjects().isEmpty()) {
             return 0.0;
         }
@@ -73,143 +174,87 @@ public class ScoringService {
         long matches = 0;
 
         for (StudentProject project : student.getProjects()) {
-            String tech = (project.getTechnologies() != null ? project.getTechnologies() : "").toLowerCase();
-            String desc = (project.getDescription() != null ? project.getDescription() : "").toLowerCase();
-            
-            if (jobText.contains(project.getName().toLowerCase()) || 
-                (!tech.isBlank() && jobText.contains(tech)) ||
-                (!desc.isBlank() && jobText.contains(desc))) {
+            String tech = project.getTechnologies() != null ? project.getTechnologies().toLowerCase() : "";
+            String desc = project.getDescription() != null ? project.getDescription().toLowerCase() : "";
+            String name = project.getName() != null ? project.getName().toLowerCase() : "";
+
+            if (jobText.contains(name) || (!tech.isBlank() && jobText.contains(tech)) || (!desc.isBlank() && jobText.contains(desc))) {
                 matches++;
             }
         }
 
         double ratio = (double) matches / student.getProjects().size();
-        return ratio * 20.0;
+        return Math.min(5.0, ratio * 5.0);
     }
 
-    // Experience Fit (15%) - Years of experience vs job requirements
-    public double calculateExperienceFit(Student student, Job job) {
-        double years = calculateYearsOfExperience(student);
-        String expLevel = job.getExperienceLevel() != null ? job.getExperienceLevel().toUpperCase() : "ENTRY_LEVEL";
-
-        if (expLevel.contains("SENIOR")) {
-            if (years >= 5.0) return 15.0;
-            return (years / 5.0) * 15.0;
-        } else if (expLevel.contains("MID")) {
-            if (years >= 2.0) return 15.0;
-            return (years / 2.0) * 15.0;
-        } else {
-            // Entry Level
-            return 15.0;
-        }
-    }
-
-    // Domain Fit (10%) - Overlap of major/education, experience domain, skills, and preferences with job title
-    public double calculateDomainFit(Student student, Job job) {
-        String jobTitle = (job.getTitle() != null ? job.getTitle() : "").toLowerCase();
-        String jobReqs = (job.getRequirements() != null ? job.getRequirements() : "").toLowerCase();
-        String jobFull = jobTitle + " " + jobReqs;
-        double score = 0.0;
-
-        // Check education major domain
-        if (student.getEducation() != null) {
-            for (StudentEducation edu : student.getEducation()) {
-                String field = edu.getFieldOfStudy() != null ? edu.getFieldOfStudy().toLowerCase() : "";
-                if (!field.isBlank()) {
-                    for (String token : field.split("[\\s,/]+")) {
-                        if (token.length() > 3 && jobFull.contains(token)) {
-                            score = Math.max(score, 10.0);
-                            break;
-                        }
-                    }
-                }
-            }
+    // 6. Certifications (5%)
+    public double calculateCertificationsScore(Student student, Job job) {
+        if (student.getCertifications() == null || student.getCertifications().isEmpty()) {
+            return 0.0;
         }
 
-        // Check skills for domain match (e.g. marketing skills matching marketing job)
-        if (student.getSkills() != null) {
-            for (StudentSkill skill : student.getSkills()) {
-                String sName = skill.getName() != null ? skill.getName().toLowerCase() : "";
-                if (!sName.isBlank() && jobFull.contains(sName)) {
-                    score = Math.max(score, 10.0);
-                    break;
-                }
-            }
-        }
-
-        // Check experience titles domain & career preferences
-        if (student.getExperience() != null) {
-            for (StudentExperience exp : student.getExperience()) {
-                String title = exp.getJobTitle() != null ? exp.getJobTitle().toLowerCase() : "";
-                if (!title.isBlank()) {
-                    for (String token : title.split("[\\s,/]+")) {
-                        if (token.length() > 3 && jobFull.contains(token)) {
-                            score = Math.max(score, 10.0);
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        if (student.getCareerPreferences() != null && !student.getCareerPreferences().isBlank()) {
-            String prefs = student.getCareerPreferences().toLowerCase();
-            for (String token : prefs.split("[\\s,/]+")) {
-                if (token.length() > 3 && jobFull.contains(token)) {
-                    score = Math.max(score, 10.0);
-                    break;
-                }
-            }
-        }
-
-        return score;
-    }
-
-    // Behavioral Fit (10%) - Soft skills keyword matching
-    public double calculateBehavioralFit(Student student, Job job) {
-        String searchArea = ((student.getBio() != null ? student.getBio() : "") + " " + 
-                student.getExperience().stream().map(e -> e.getDescription() != null ? e.getDescription() : "").collect(Collectors.joining(" "))).toLowerCase();
-
-        String[] keywords = {"teamwork", "leadership", "communication", "problem solving", "organization", "agile", "scrum", "collaboration", "adaptability"};
+        String jobText = (job.getTitle() + " " + job.getRequirements() + " " + job.getDescription()).toLowerCase();
         long matches = 0;
 
-        for (String kw : keywords) {
-            if (searchArea.contains(kw)) {
+        for (StudentCertification cert : student.getCertifications()) {
+            String cName = cert.getName() != null ? cert.getName().toLowerCase() : "";
+            if (!cName.isBlank() && (jobText.contains(cName) || cName.contains("certified") || cName.contains("aws") || cName.contains("google") || cName.contains("microsoft"))) {
                 matches++;
             }
         }
 
-        // Target: matches at least 3 behavioral keywords for full points
-        double ratio = (double) matches / 3.0;
-        return Math.min(10.0, ratio * 10.0);
+        if (matches > 0) return 5.0;
+        return 2.5; // Baseline credit for having completed professional certifications
     }
 
-    // Education & Certifications Fit (5%)
-    public double calculateEduCertFit(Student student) {
+    // 7. Preferred Location / Work Mode (3%)
+    public double calculateLocationWorkModeMatch(Student student, Job job) {
         double score = 0.0;
 
-        // GPA component (2.5%)
-        if (student.getEducation() != null && !student.getEducation().isEmpty()) {
-            double maxGpa = student.getEducation().stream()
-                    .filter(e -> e.getGpa() != null)
-                    .mapToDouble(StudentEducation::getGpa)
-                    .max()
-                    .orElse(0.0);
+        String studentLoc = ((student.getCareerPreferences() != null ? student.getCareerPreferences() : "") + " " +
+                (student.getBio() != null ? student.getBio() : "")).toLowerCase();
+        String jobLoc = job.getLocation() != null ? job.getLocation().toLowerCase() : "";
+        String workMode = job.getWorkMode() != null ? job.getWorkMode().toUpperCase() : "HYBRID";
 
-            if (maxGpa >= 3.5) {
-                score += 2.5;
-            } else if (maxGpa >= 3.0) {
-                score += 1.5;
-            }
+        if ("REMOTE".equalsIgnoreCase(workMode)) {
+            score += 3.0; // Remote fits all locations
+        } else if (!jobLoc.isBlank() && !studentLoc.isBlank() && (studentLoc.contains(jobLoc) || jobLoc.contains(studentLoc))) {
+            score += 3.0;
+        } else {
+            score += 1.5; // Partial location fit baseline
         }
 
-        // Certifications component (2.5%)
-        if (student.getCertifications() != null && !student.getCertifications().isEmpty()) {
-            score += 2.5;
-        }
-
-        return score;
+        return Math.min(3.0, score);
     }
+
+    // 8. Job Preferences (Role, Salary, etc.) (2%)
+    public double calculatePreferencesMatch(Student student, Job job) {
+        if (student.getCareerPreferences() == null || student.getCareerPreferences().isBlank()) {
+            return 1.0; // Baseline neutral preference score
+        }
+
+        String prefs = student.getCareerPreferences().toLowerCase();
+        String jobTitle = job.getTitle() != null ? job.getTitle().toLowerCase() : "";
+        String salaryRange = job.getSalaryRange() != null ? job.getSalaryRange().toLowerCase() : "";
+
+        double score = 0.0;
+        if (prefs.contains(jobTitle) || jobTitle.contains(prefs)) {
+            score += 1.5;
+        }
+        if (!salaryRange.isBlank() && prefs.contains("salary")) {
+            score += 0.5;
+        }
+
+        return Math.min(2.0, Math.max(1.0, score));
+    }
+
+    // ── Backward-compatible sub-score delegates for API details responses ───
+    public double calculateTechnicalFit(Student student, Job job)  { return calculateSkillsMatch(student, job); }
+    public double calculateProjectFit(Student student, Job job)    { return calculateProjectsMatch(student, job); }
+    public double calculateExperienceFit(Student student, Job job) { return calculateExperienceMatch(student, job); }
+    public double calculateDomainFit(Student student, Job job)     { return calculateSkillsMatch(student, job) * 0.3; }
+    public double calculateBehavioralFit(Student student, Job job) { return calculateProjectsMatch(student, job); }
+    public double calculateEduCertFit(Student student)             { return calculateCertificationsScore(student, null); }
 
     private double calculateYearsOfExperience(Student student) {
         if (student.getExperience() == null || student.getExperience().isEmpty()) {

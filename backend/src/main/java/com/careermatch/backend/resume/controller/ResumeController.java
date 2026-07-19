@@ -15,6 +15,7 @@ import com.careermatch.backend.resume.service.ResumeService;
 import com.careermatch.backend.student.entity.Student;
 import com.careermatch.backend.student.repository.StudentRepository;
 import com.careermatch.backend.util.FileStorageService;
+import com.careermatch.backend.util.SupabaseStorageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +44,7 @@ import java.util.UUID;
 public class ResumeController {
 
     private final FileStorageService fileStorageService;
+    private final SupabaseStorageService supabaseStorageService;
     private final PdfParserService pdfParserService;
     private final ResumeRepository resumeRepository;
     private final UserRepository userRepository;
@@ -53,7 +55,7 @@ public class ResumeController {
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAuthority('ROLE_STUDENT')")
-    @Operation(summary = "Upload resume PDF/DOCX — text is extracted in-memory; original file is deleted immediately")
+    @Operation(summary = "Upload resume PDF/DOCX — stores original PDF in Supabase Storage, extracts text, and triggers AI processing pipeline")
     public ResponseEntity<ApiResponse<ResumeResponse>> uploadResume(@RequestParam("file") MultipartFile file) {
         log.info("Resume upload request received. Original filename: {}, ContentType: {}",
                 file != null ? file.getOriginalFilename() : "null",
@@ -94,40 +96,46 @@ public class ResumeController {
                     return studentRepository.save(newStudent);
                 });
 
-        // ── Step 1: Write the uploaded bytes to a unique temp file ────────────────
+        // ── Step 1: Upload original file to Supabase Storage ──────────────────────
+        long startUploadTime = System.currentTimeMillis();
+        String supabaseFileUrl = "";
+        try {
+            supabaseFileUrl = supabaseStorageService.uploadFile(file);
+        } catch (Exception e) {
+            log.warn("Failed to upload to Supabase Storage: {}", e.getMessage());
+        }
+
+        // ── Step 2: Write temp file & extract text ─────────────────────────────────
         String storedFilename = null;
         String parsedText;
-        long startUploadTime = System.currentTimeMillis();
         try {
             long startStore = System.currentTimeMillis();
             storedFilename = fileStorageService.storeFile(file);
             long storeDuration = System.currentTimeMillis() - startStore;
             log.info("[TIMING] Temp resume file stored in {} ms.", storeDuration);
 
-            // ── Step 2: Extract text from the temp file ───────────────────────────
             long startParse = System.currentTimeMillis();
             try (InputStream is = fileStorageService.getFileAsStream(storedFilename)) {
                 parsedText = pdfParserService.parseDocument(is, origName);
             }
 
             long parseDuration = System.currentTimeMillis() - startParse;
-            log.info("[TIMING] PDF parsing call took {} ms (length = {} chars).", parseDuration, parsedText.length());
+            log.info("[TIMING] Document text extraction took {} ms (length = {} chars).", parseDuration, parsedText.length());
 
         } catch (Exception e) {
             log.warn("Text extraction failed; using fallback placeholder text. Reason: {}", e.getMessage());
             parsedText = "Resume candidate skills Java Spring Boot Angular Database SQL";
         } finally {
-            // ── Step 3: Delete temp file IMMEDIATELY — never keep the raw PDF ──────
             if (storedFilename != null) {
                 fileStorageService.deleteFile(storedFilename);
             }
         }
 
-        // ── Step 4: Persist Resume row — no file URL, only extracted text ────────
+        // ── Step 3: Persist Resume row in PostgreSQL ───────────────────────────────
         long startDb = System.currentTimeMillis();
         Resume resume = Resume.builder()
                 .student(student)
-                .fileUrl("")          // No file retained — intentionally empty
+                .fileUrl(supabaseFileUrl)
                 .parsedText(parsedText)
                 .isCurrent(true)
                 .processingStatus("PROCESSING")
@@ -138,7 +146,7 @@ public class ResumeController {
         log.info("[TIMING] Initial DB Resume save took {} ms.", dbDuration);
         log.info("[TIMING] Total upload controller request took {} ms.", System.currentTimeMillis() - startUploadTime);
 
-        // ── Step 5: Publish async task via RabbitMQ and local event listener ────
+        // ── Step 4: Publish async task via RabbitMQ and local event listener ────
         ResumeUploadedEvent event = new ResumeUploadedEvent(saved.getId(), student.getId());
         try {
             rabbitTemplate.convertAndSend(QueueConfig.EXCHANGE, QueueConfig.RESUME_UPLOADED_ROUTING_KEY, event);
@@ -147,19 +155,18 @@ public class ResumeController {
             log.warn("RabbitMQ unavailable — falling back to local ApplicationEvent for resume {}: {}",
                     saved.getId(), e.getMessage());
         }
-        // Always dispatch ApplicationEvent to guarantee background execution in standalone environments
         eventPublisher.publishEvent(event);
 
         ResumeResponse response = ResumeResponse.builder()
                 .id(saved.getId())
-                .fileUrl("")
+                .fileUrl(supabaseFileUrl)
                 .isCurrent(saved.isCurrent())
                 .processingStatus(saved.getProcessingStatus())
                 .createdAt(LocalDateTime.now())
                 .build();
 
         return ResponseEntity.ok(ApiResponse.success(
-                "Resume uploaded. Text extracted and temporary file deleted. AI processing started.", response));
+                "Resume uploaded to Supabase Storage. Text extracted and AI processing pipeline started.", response));
     }
 
     @GetMapping("/download/{filename}")

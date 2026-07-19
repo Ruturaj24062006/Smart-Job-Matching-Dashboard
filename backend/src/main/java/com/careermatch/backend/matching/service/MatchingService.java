@@ -19,6 +19,8 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import com.careermatch.backend.resume.entity.Resume;
+import com.careermatch.backend.resume.repository.ResumeRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +34,7 @@ public class MatchingService {
 
     private final StudentRepository studentRepository;
     private final MatchRepository   matchRepository;
+    private final ResumeRepository  resumeRepository;
     private final SearchService     searchService;
     private final ScoringService    scoringService;
     private final GroqService       groqService;
@@ -45,16 +48,18 @@ public class MatchingService {
     /**
      * Runs the full hybrid RAG + scoring pipeline for a student:
      * 1. pgvector cosine search + BM25 FTS → RRF fusion (top-{@value TOP_CANDIDATES} candidates)
-     * 2. Deterministic 6-factor ScoringService for each candidate
+     * 2. Deterministic 100-mark ScoringService for each candidate
      * 3. Sort descending by composite score
      * 4. Persist all Match entities (upsert)
-     * 5. Invalidate + repopulate Redis cache
      */
     @Transactional
     public List<Match> generateMatchesForStudent(UUID studentId) {
         log.info("Generating job matches for student: {} (top {} RRF candidates)", studentId, TOP_CANDIDATES);
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + studentId));
+
+        Resume resume = resumeRepository.findByStudentIdAndIsCurrentTrue(studentId).orElse(null);
+        float[] studentVector = (resume != null && resume.getEmbedding() != null) ? resume.getEmbedding() : null;
 
         // Step 1: Hybrid search — pgvector + BM25 + RRF
         List<Job> topJobs = searchService.searchJobsForStudent(student, TOP_CANDIDATES);
@@ -63,7 +68,7 @@ public class MatchingService {
         // Step 2: Score and upsert all candidates
         List<Match> matches = new ArrayList<>();
         for (Job job : topJobs) {
-            matches.add(generateMatchForStudentAndJob(student, job));
+            matches.add(generateMatchForStudentAndJob(student, job, studentVector));
         }
 
         // Step 3: Sort highest score first (deterministic ranking)
@@ -73,11 +78,6 @@ public class MatchingService {
                 matches.size(), studentId,
                 matches.isEmpty() ? "n/a" : matches.get(0).getCompositeScore());
 
-        // NOTE: Redis caching of Match JPA entities is intentionally disabled
-        // because Match.student and Match.job use FetchType.LAZY, causing
-        // Jackson serialization failures (LazyInitializationException -> 500).
-        // Matches are always served fresh from PostgreSQL.
-
         return matches;
     }
 
@@ -85,14 +85,24 @@ public class MatchingService {
     public Match generateMatchesForStudentAndJob(UUID studentId, Job job) {
         Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + studentId));
-        Match m = generateMatchForStudentAndJob(student, job);
+        Resume resume = resumeRepository.findByStudentIdAndIsCurrentTrue(studentId).orElse(null);
+        float[] studentVector = (resume != null && resume.getEmbedding() != null) ? resume.getEmbedding() : null;
+
+        Match m = generateMatchForStudentAndJob(student, job, studentVector);
         invalidateCache(studentId);
         return m;
     }
 
     @Transactional
     public Match generateMatchForStudentAndJob(Student student, Job job) {
-        double score    = scoringService.calculateCompositeScore(student, job);
+        Resume resume = resumeRepository.findByStudentIdAndIsCurrentTrue(student.getId()).orElse(null);
+        float[] studentVector = (resume != null && resume.getEmbedding() != null) ? resume.getEmbedding() : null;
+        return generateMatchForStudentAndJob(student, job, studentVector);
+    }
+
+    @Transactional
+    public Match generateMatchForStudentAndJob(Student student, Job job, float[] studentVector) {
+        double score    = scoringService.calculateCompositeScore(student, job, studentVector);
         boolean eligible = score >= 40.0;
 
         Optional<Match> existingOpt = matchRepository.findByStudentIdAndJobId(student.getId(), job.getId());
